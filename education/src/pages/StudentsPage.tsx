@@ -39,6 +39,7 @@ export const StudentsPage: React.FC = () => {
   const [guardianPhone, setGuardianPhone] = useState('')
   const [busRoute, setBusRoute] = useState('Bus Route 04 (North City)')
   const [bloodGroup, setBloodGroup] = useState('B+')
+  const [gender, setGender] = useState<'Male' | 'Female'>('Male')
 
   // Filtered list
   const filteredStudents = useMemo(() => {
@@ -63,6 +64,7 @@ export const StudentsPage: React.FC = () => {
         rollNumber ||
         `SCH-${classGrade.replace('Class ', '').replace('-', '')}-${String(students.length + 1).padStart(2, '0')}`,
       email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@demo.com`,
+      gender,
       classGrade,
       section,
       academicYear: '2024–2025',
@@ -473,6 +475,18 @@ export const StudentsPage: React.FC = () => {
                 <option>A-</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-[#14241e] mb-1">Gender</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
+              className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
+            >
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+            </select>
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3ef]">

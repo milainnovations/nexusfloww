@@ -27,7 +27,7 @@ import {
   FeeCollectionDonutChart,
   FeeRecoveryTrendAreaChart,
 } from '../components/analytics/AnalyticsCharts'
-import type { ExpenseRecord, AdmissionRecord } from '../data/mockData'
+import type { ExpenseRecord } from '../data/mockData'
 
 export const AdministrationPage: React.FC = () => {
   const {
@@ -73,8 +73,6 @@ export const AdministrationPage: React.FC = () => {
   const budgetUtilPct = Math.round((totalSpent / totalBudget) * 100)
 
   const pendingExpenses = expenses.filter((e) => e.status === 'Pending Approval')
-  const approvedExpenses = expenses.filter((e) => e.status === 'Approved')
-  const totalApprovedSpend = approvedExpenses.reduce((a, b) => a + b.amount, 0)
 
   const admittedCount = admissions.filter((a) => a.status === 'Admitted').length
   const pendingAdmissions = admissions.filter((a) => a.status === 'Under Review' || a.status === 'Shortlisted').length
