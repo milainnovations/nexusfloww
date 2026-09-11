@@ -3,6 +3,7 @@ export interface Student {
   rollNumber: string
   name: string
   email: string
+  gender: 'Male' | 'Female'
   classGrade: string // e.g. 'Class 8-A', 'Class 6-B', 'Class 10-A'
   section: string // 'A' | 'B'
   academicYear: string
@@ -158,11 +159,225 @@ export interface UserRole {
   id: string
   name: string
   email: string
-  role: 'Super Admin' | 'Principal' | 'Teacher' | 'Student' | 'Parent' | 'Library Admin'
+  role: 'Super Admin' | 'Principal' | 'Teacher' | 'Student' | 'Parent' | 'Library Admin' | 'Administration'
   designation: string
   lastActive: string
   status: 'Active' | 'Invited' | 'Suspended'
 }
+
+/* Administration: Expenses & School Budget */
+export interface ExpenseRecord {
+  id: string
+  expenseNumber: string
+  category: 'Salaries & Staff' | 'Infrastructure & Maintenance' | 'Utilities & Bills' | 'Stationery & Supplies' | 'Transport & Fleet' | 'Events & Activities' | 'Technology & IT' | 'Miscellaneous'
+  description: string
+  vendor: string
+  amount: number
+  approvedBy: string
+  date: string
+  status: 'Approved' | 'Pending Approval' | 'Rejected'
+  paymentMode: 'Bank Transfer' | 'Cash' | 'Cheque' | 'Online Payment'
+  remarks?: string
+}
+
+export interface BudgetAllocation {
+  id: string
+  category: string
+  allocatedAmount: number
+  spentAmount: number
+  academicYear: string
+  color: string
+}
+
+export interface AdmissionRecord {
+  id: string
+  applicationNumber: string
+  applicantName: string
+  applyingForClass: string
+  guardianName: string
+  guardianPhone: string
+  applicationDate: string
+  status: 'Under Review' | 'Shortlisted' | 'Admitted' | 'Rejected' | 'Waitlisted'
+  interviewDate?: string
+  remarks?: string
+}
+
+export const INITIAL_EXPENSES: ExpenseRecord[] = [
+  {
+    id: 'exp-1',
+    expenseNumber: 'EXP-2024-001',
+    category: 'Salaries & Staff',
+    description: 'Teaching Faculty Monthly Salary — September 2024',
+    vendor: 'Greenwood Payroll Office',
+    amount: 450000,
+    approvedBy: 'Dr. Rajesh Kumar',
+    date: '30 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Bank Transfer',
+    remarks: 'Monthly payroll processed for all 4 faculty members.',
+  },
+  {
+    id: 'exp-2',
+    expenseNumber: 'EXP-2024-002',
+    category: 'Utilities & Bills',
+    description: 'Campus Electricity & Water Supply Bill — September',
+    vendor: 'BESCOM / BWSSB',
+    amount: 38500,
+    approvedBy: 'Dr. Anita Sharma',
+    date: '25 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Online Payment',
+    remarks: 'Regular monthly utility charges for campus.',
+  },
+  {
+    id: 'exp-3',
+    expenseNumber: 'EXP-2024-003',
+    category: 'Infrastructure & Maintenance',
+    description: 'Science Laboratory Equipment Maintenance & Calibration',
+    vendor: 'LabTech Services Pvt. Ltd.',
+    amount: 75000,
+    approvedBy: 'Dr. Rajesh Kumar',
+    date: '20 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Cheque',
+    remarks: 'Annual AMC for science lab instruments — Physics & Chemistry.',
+  },
+  {
+    id: 'exp-4',
+    expenseNumber: 'EXP-2024-004',
+    category: 'Stationery & Supplies',
+    description: 'Academic Stationery & Classroom Supplies — Term 2 Replenishment',
+    vendor: 'National Book Depot',
+    amount: 24500,
+    approvedBy: 'Mrs. Priya Desai (Admin Head)',
+    date: '18 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Bank Transfer',
+    remarks: 'Includes chalk, markers, chart papers, register notebooks.',
+  },
+  {
+    id: 'exp-5',
+    expenseNumber: 'EXP-2024-005',
+    category: 'Transport & Fleet',
+    description: 'School Bus Fleet Fuel & Driver Allowance — September',
+    vendor: 'HP Petrol Pump & Transport Dept.',
+    amount: 62000,
+    approvedBy: 'Dr. Anita Sharma',
+    date: '28 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Cash',
+    remarks: 'Fuel for 3 active school bus routes + driver monthly incentives.',
+  },
+  {
+    id: 'exp-6',
+    expenseNumber: 'EXP-2024-006',
+    category: 'Events & Activities',
+    description: 'Annual Sports Day Event — Equipment & Prize Procurement',
+    vendor: 'Sports Emporium Bengaluru',
+    amount: 45000,
+    approvedBy: 'Dr. Rajesh Kumar',
+    date: '10 Sep 2024',
+    status: 'Pending Approval',
+    paymentMode: 'Bank Transfer',
+    remarks: 'Pending final approval. Includes trophies, medals, and sports equipment.',
+  },
+  {
+    id: 'exp-7',
+    expenseNumber: 'EXP-2024-007',
+    category: 'Technology & IT',
+    description: 'School ERP License Renewal & Cloud Server Maintenance',
+    vendor: 'NexusFlow Technologies',
+    amount: 120000,
+    approvedBy: 'Dr. Rajesh Kumar',
+    date: '05 Sep 2024',
+    status: 'Approved',
+    paymentMode: 'Bank Transfer',
+    remarks: 'Annual SaaS license for school management platform.',
+  },
+  {
+    id: 'exp-8',
+    expenseNumber: 'EXP-2024-008',
+    category: 'Infrastructure & Maintenance',
+    description: 'Classroom Air Conditioning Units — AMC Service',
+    vendor: 'CoolAir Appliance Services',
+    amount: 28000,
+    approvedBy: 'Mrs. Priya Desai (Admin Head)',
+    date: '12 Sep 2024',
+    status: 'Rejected',
+    paymentMode: 'Cheque',
+    remarks: 'Rejected — duplicate request. AMC already covered under Q2 contract.',
+  },
+]
+
+export const INITIAL_BUDGET_ALLOCATIONS: BudgetAllocation[] = [
+  { id: 'bgt-1', category: 'Salaries & Staff', allocatedAmount: 5400000, spentAmount: 4500000, academicYear: '2024-2025', color: '#0e4b38' },
+  { id: 'bgt-2', category: 'Infrastructure & Maintenance', allocatedAmount: 800000, spentAmount: 480000, academicYear: '2024-2025', color: '#16a34a' },
+  { id: 'bgt-3', category: 'Utilities & Bills', allocatedAmount: 480000, spentAmount: 347000, academicYear: '2024-2025', color: '#2563eb' },
+  { id: 'bgt-4', category: 'Stationery & Supplies', allocatedAmount: 150000, spentAmount: 98000, academicYear: '2024-2025', color: '#d97706' },
+  { id: 'bgt-5', category: 'Transport & Fleet', allocatedAmount: 750000, spentAmount: 558000, academicYear: '2024-2025', color: '#7c3aed' },
+  { id: 'bgt-6', category: 'Events & Activities', allocatedAmount: 200000, spentAmount: 85000, academicYear: '2024-2025', color: '#dc2626' },
+  { id: 'bgt-7', category: 'Technology & IT', allocatedAmount: 300000, spentAmount: 240000, academicYear: '2024-2025', color: '#0891b2' },
+]
+
+export const INITIAL_ADMISSIONS: AdmissionRecord[] = [
+  {
+    id: 'adm-1',
+    applicationNumber: 'ADM-2024-001',
+    applicantName: 'Aryan Mehta',
+    applyingForClass: 'Class 6-A',
+    guardianName: 'Mr. Sunil Mehta',
+    guardianPhone: '+91 98765 11001',
+    applicationDate: '05 Sep 2024',
+    status: 'Admitted',
+    interviewDate: '10 Sep 2024',
+    remarks: 'Strong academic record. Admitted with merit.',
+  },
+  {
+    id: 'adm-2',
+    applicationNumber: 'ADM-2024-002',
+    applicantName: 'Divya Krishnan',
+    applyingForClass: 'Class 7-A',
+    guardianName: 'Mrs. Savitha Krishnan',
+    guardianPhone: '+91 98765 11002',
+    applicationDate: '08 Sep 2024',
+    status: 'Shortlisted',
+    interviewDate: '15 Sep 2024',
+    remarks: 'Shortlisted for interview round.',
+  },
+  {
+    id: 'adm-3',
+    applicationNumber: 'ADM-2024-003',
+    applicantName: 'Raman Nair',
+    applyingForClass: 'Class 9-A',
+    guardianName: 'Mr. Vinod Nair',
+    guardianPhone: '+91 98765 11003',
+    applicationDate: '10 Sep 2024',
+    status: 'Under Review',
+    remarks: 'Documents under verification.',
+  },
+  {
+    id: 'adm-4',
+    applicationNumber: 'ADM-2024-004',
+    applicantName: 'Nisha Joshi',
+    applyingForClass: 'Class 6-B',
+    guardianName: 'Mr. Tarun Joshi',
+    guardianPhone: '+91 98765 11004',
+    applicationDate: '12 Sep 2024',
+    status: 'Waitlisted',
+    remarks: 'Class 6-B is at capacity. Added to waitlist.',
+  },
+  {
+    id: 'adm-5',
+    applicationNumber: 'ADM-2024-005',
+    applicantName: 'Karan Bhatia',
+    applyingForClass: 'Class 8-A',
+    guardianName: 'Mrs. Pooja Bhatia',
+    guardianPhone: '+91 98765 11005',
+    applicationDate: '14 Sep 2024',
+    status: 'Rejected',
+    remarks: 'Does not meet age eligibility criteria for Class 8.',
+  },
+]
 
 /* ----------------------------------------------------
    STUDENTS DATASET (SCHOOL GRADES 6 TO 10)
@@ -173,6 +388,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-8A-01',
     name: 'Rahul Sharma',
     email: 'rahul.sharma@demo.com',
+    gender: 'Male',
     classGrade: 'Class 8-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -198,6 +414,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-8A-02',
     name: 'Sneha Patel',
     email: 'sneha.patel@demo.com',
+    gender: 'Female',
     classGrade: 'Class 8-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -223,6 +440,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-8A-03',
     name: 'Amit Kumar',
     email: 'amit.kumar@demo.com',
+    gender: 'Male',
     classGrade: 'Class 8-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -248,6 +466,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-8A-04',
     name: 'Pooja Gupta',
     email: 'pooja.gupta@demo.com',
+    gender: 'Female',
     classGrade: 'Class 8-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -273,6 +492,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-8A-05',
     name: 'Rohit Jain',
     email: 'rohit.jain@demo.com',
+    gender: 'Male',
     classGrade: 'Class 8-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -298,6 +518,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-6B-01',
     name: 'Ananya Reddy',
     email: 'ananya.reddy@demo.com',
+    gender: 'Female',
     classGrade: 'Class 6-B',
     section: 'B',
     academicYear: '2024–2025',
@@ -323,6 +544,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-7A-01',
     name: 'Vijay Nair',
     email: 'vijay.nair@demo.com',
+    gender: 'Male',
     classGrade: 'Class 7-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -348,6 +570,7 @@ export const INITIAL_STUDENTS: Student[] = [
     rollNumber: 'SCH-10A-01',
     name: 'Kavita Das',
     email: 'kavita.das@demo.com',
+    gender: 'Female',
     classGrade: 'Class 10-A',
     section: 'A',
     academicYear: '2024–2025',
@@ -1058,6 +1281,15 @@ export const INITIAL_USERS: UserRole[] = [
     role: 'Library Admin',
     designation: 'Head Librarian & Learning Resource Administrator',
     lastActive: '10 mins ago',
+    status: 'Active',
+  },
+  {
+    id: 'u-7',
+    name: 'Mrs. Priya Desai',
+    email: 'admin.office@demo.com',
+    role: 'Administration',
+    designation: 'Head of Administration & Accounts Department',
+    lastActive: '8 mins ago',
     status: 'Active',
   },
   {

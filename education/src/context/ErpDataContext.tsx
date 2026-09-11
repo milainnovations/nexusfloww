@@ -11,6 +11,9 @@ import type {
   LibraryBook,
   BookIssueRecord,
   UserRole,
+  ExpenseRecord,
+  BudgetAllocation,
+  AdmissionRecord,
 } from '../data/mockData'
 import {
   INITIAL_STUDENTS,
@@ -24,6 +27,9 @@ import {
   INITIAL_LIBRARY_BOOKS,
   INITIAL_BOOK_ISSUES,
   INITIAL_USERS,
+  INITIAL_EXPENSES,
+  INITIAL_BUDGET_ALLOCATIONS,
+  INITIAL_ADMISSIONS,
 } from '../data/mockData'
 
 interface ErpDataContextType {
@@ -38,6 +44,9 @@ interface ErpDataContextType {
   libraryBooks: LibraryBook[]
   bookIssues: BookIssueRecord[]
   usersList: UserRole[]
+  expenses: ExpenseRecord[]
+  budgetAllocations: BudgetAllocation[]
+  admissions: AdmissionRecord[]
 
   // Stats
   enrolledStudentsCount: number
@@ -80,6 +89,13 @@ interface ErpDataContextType {
   processBookReturn: (issueId: string) => void
   issueLibraryBook: (bookId: string) => void
   returnLibraryBook: (bookId: string) => void
+
+  // Administration Actions
+  addExpense: (expense: Omit<ExpenseRecord, 'id' | 'expenseNumber'>) => ExpenseRecord
+  updateExpenseStatus: (id: string, status: ExpenseRecord['status']) => void
+  addAdmission: (admission: Omit<AdmissionRecord, 'id' | 'applicationNumber'>) => AdmissionRecord
+  updateAdmissionStatus: (id: string, status: AdmissionRecord['status'], remarks?: string) => void
+
   resetData: () => void
 }
 
@@ -88,7 +104,15 @@ const ErpDataContext = createContext<ErpDataContextType | undefined>(undefined)
 export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [students, setStudents] = useState<Student[]>(() => {
     const saved = localStorage.getItem('edu_students_v1')
-    return saved ? JSON.parse(saved) : INITIAL_STUDENTS
+    if (!saved) return INITIAL_STUDENTS
+    const parsed: Student[] = JSON.parse(saved)
+    // Migration: backfill gender field if missing (added after initial release)
+    const genderMap: Record<string, 'Male' | 'Female'> = {
+      'SCH-8A-01': 'Male', 'SCH-8A-02': 'Female', 'SCH-8A-03': 'Male',
+      'SCH-8A-04': 'Female', 'SCH-8A-05': 'Male', 'SCH-6B-01': 'Female',
+      'SCH-7A-01': 'Male', 'SCH-10A-01': 'Female',
+    }
+    return parsed.map((s) => s.gender ? s : { ...s, gender: genderMap[s.rollNumber] ?? 'Male' })
   })
 
   const [facultyList, setFacultyList] = useState<Faculty[]>(() => {
@@ -138,6 +162,18 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return saved ? JSON.parse(saved) : INITIAL_USERS
   })
 
+  const [expenses, setExpenses] = useState<ExpenseRecord[]>(() => {
+    const saved = localStorage.getItem('edu_expenses_v1')
+    return saved ? JSON.parse(saved) : INITIAL_EXPENSES
+  })
+
+  const [budgetAllocations] = useState<BudgetAllocation[]>(INITIAL_BUDGET_ALLOCATIONS)
+
+  const [admissions, setAdmissions] = useState<AdmissionRecord[]>(() => {
+    const saved = localStorage.getItem('edu_admissions_v1')
+    return saved ? JSON.parse(saved) : INITIAL_ADMISSIONS
+  })
+
   // Sync with localStorage
   useEffect(() => {
     localStorage.setItem('edu_students_v1', JSON.stringify(students))
@@ -170,6 +206,14 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem('edu_book_issues_v1', JSON.stringify(bookIssues))
   }, [bookIssues])
+
+  useEffect(() => {
+    localStorage.setItem('edu_expenses_v1', JSON.stringify(expenses))
+  }, [expenses])
+
+  useEffect(() => {
+    localStorage.setItem('edu_admissions_v1', JSON.stringify(admissions))
+  }, [admissions])
 
   // Calculated Metrics
   const enrolledStudentsCount = students.length
@@ -500,6 +544,37 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     )
   }
 
+  // Administration Handlers
+  const addExpense = (data: Omit<ExpenseRecord, 'id' | 'expenseNumber'>) => {
+    const newExpense: ExpenseRecord = {
+      ...data,
+      id: `exp-${Date.now()}`,
+      expenseNumber: `EXP-2024-${String(expenses.length + 1).padStart(3, '0')}`,
+    }
+    setExpenses((prev) => [newExpense, ...prev])
+    return newExpense
+  }
+
+  const updateExpenseStatus = (id: string, status: ExpenseRecord['status']) => {
+    setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, status } : e)))
+  }
+
+  const addAdmission = (data: Omit<AdmissionRecord, 'id' | 'applicationNumber'>) => {
+    const newAdmission: AdmissionRecord = {
+      ...data,
+      id: `adm-${Date.now()}`,
+      applicationNumber: `ADM-2024-${String(admissions.length + 1).padStart(3, '0')}`,
+    }
+    setAdmissions((prev) => [newAdmission, ...prev])
+    return newAdmission
+  }
+
+  const updateAdmissionStatus = (id: string, status: AdmissionRecord['status'], remarks?: string) => {
+    setAdmissions((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, status, ...(remarks ? { remarks } : {}) } : a))
+    )
+  }
+
   const resetData = () => {
     setStudents(INITIAL_STUDENTS)
     setFacultyList(INITIAL_FACULTY)
@@ -511,6 +586,8 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setLibraryBooks(INITIAL_LIBRARY_BOOKS)
     setBookIssues(INITIAL_BOOK_ISSUES)
     setUsersList(INITIAL_USERS)
+    setExpenses(INITIAL_EXPENSES)
+    setAdmissions(INITIAL_ADMISSIONS)
     localStorage.clear()
   }
 
@@ -528,6 +605,9 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         libraryBooks,
         bookIssues,
         usersList,
+        expenses,
+        budgetAllocations,
+        admissions,
         enrolledStudentsCount,
         facultyCount,
         totalFeesOutstanding,
@@ -559,6 +639,10 @@ export const ErpDataProvider: React.FC<{ children: React.ReactNode }> = ({ child
         processBookReturn,
         issueLibraryBook,
         returnLibraryBook,
+        addExpense,
+        updateExpenseStatus,
+        addAdmission,
+        updateAdmissionStatus,
         resetData,
       }}
     >

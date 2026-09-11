@@ -1037,3 +1037,355 @@ export const ReportCardBenchmarkComparisonChart: React.FC<{
     </div>
   )
 }
+
+/* -------------------------------------------------------------
+   ADMINISTRATION ANALYTICS CHARTS
+------------------------------------------------------------- */
+
+/* -------------------------------------------------------------
+   A1. EXPENSE CATEGORY BREAKDOWN BAR CHART
+------------------------------------------------------------- */
+export interface ExpenseCategoryData {
+  category: string
+  amount: number
+  budget: number
+}
+
+const defaultExpenseCategoryData: ExpenseCategoryData[] = [
+  { category: 'Salaries', amount: 450000, budget: 540000 },
+  { category: 'Infrastructure', amount: 103000, budget: 150000 },
+  { category: 'Utilities', amount: 38500, budget: 48000 },
+  { category: 'Stationery', amount: 24500, budget: 30000 },
+  { category: 'Transport', amount: 62000, budget: 75000 },
+  { category: 'Events', amount: 45000, budget: 50000 },
+  { category: 'Technology', amount: 120000, budget: 130000 },
+]
+
+export const ExpenseCategoryBarChart: React.FC<{
+  data?: ExpenseCategoryData[]
+  title?: string
+}> = ({ data = defaultExpenseCategoryData, title = 'Expenditure by Category vs Allocated Budget' }) => {
+  return (
+    <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+      <div className="border-b border-[#edf3ef] pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+          EXPENSE ANALYSIS
+        </span>
+        <h3 className="font-editorial text-lg font-medium text-[#14241e]">{title}</h3>
+      </div>
+      <div className="h-64 w-full text-xs">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} margin={{ top: 10, right: 10, left: 5, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef4f0" vertical={false} />
+            <XAxis dataKey="category" tick={{ fill: '#50685e', fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fill: '#50685e', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#fff', borderColor: '#c9dcd2', borderRadius: '12px', fontSize: '12px' }}
+              formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
+            />
+            <Legend wrapperStyle={{ paddingTop: '8px', fontSize: '12px' }} />
+            <Bar dataKey="amount" name="Actual Spent" fill="#0e4b38" radius={[6, 6, 0, 0]} barSize={22} />
+            <Bar dataKey="budget" name="Allocated Budget" fill="#94a3b8" radius={[6, 6, 0, 0]} barSize={22} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------
+   A2. BUDGET UTILISATION DONUT CHART
+------------------------------------------------------------- */
+export interface BudgetUtilisationData {
+  name: string
+  value: number
+  color: string
+}
+
+const defaultBudgetUtilisationData: BudgetUtilisationData[] = [
+  { name: 'Salaries & Staff', value: 450000, color: '#0e4b38' },
+  { name: 'Infrastructure', value: 103000, color: '#16a34a' },
+  { name: 'Utilities', value: 38500, color: '#2563eb' },
+  { name: 'Transport & Fleet', value: 62000, color: '#d97706' },
+  { name: 'Technology & IT', value: 120000, color: '#7c3aed' },
+  { name: 'Events & Activities', value: 45000, color: '#dc2626' },
+  { name: 'Stationery', value: 24500, color: '#0891b2' },
+]
+
+export const BudgetUtilisationDonutChart: React.FC<{
+  data?: BudgetUtilisationData[]
+  title?: string
+}> = ({ data = defaultBudgetUtilisationData, title = 'Annual Budget Utilisation Distribution' }) => {
+  const total = data.reduce((acc, curr) => acc + curr.value, 0)
+
+  return (
+    <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+      <div className="border-b border-[#edf3ef] pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+          BUDGET UTILISATION
+        </span>
+        <h3 className="font-editorial text-lg font-medium text-[#14241e]">{title}</h3>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+        <div className="h-56 w-full text-xs relative flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={3} dataKey="value">
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
+                contentStyle={{ backgroundColor: '#fff', borderColor: '#c9dcd2', borderRadius: '12px', fontSize: '12px' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[9px] uppercase font-bold text-[#7e948c]">Total Spent</span>
+            <span className="font-editorial text-sm font-bold text-[#14241e]">
+              ₹{(total / 100000).toFixed(1)}L
+            </span>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          {data.map((item) => {
+            const pct = Math.round((item.value / total) * 100)
+            return (
+              <div key={item.name} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="font-medium text-[#14241e] truncate max-w-[110px]">{item.name}</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-bold text-[#14241e] text-[11px]">₹{(item.value / 1000).toFixed(0)}k</div>
+                  <div className="text-[10px] text-[#7e948c]">{pct}%</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------
+   A3. MONTHLY EXPENSE TREND LINE CHART
+------------------------------------------------------------- */
+export interface MonthlyExpenseTrendData {
+  month: string
+  expenses: number
+  revenue: number
+}
+
+const defaultMonthlyExpenseTrend: MonthlyExpenseTrendData[] = [
+  { month: 'Apr', expenses: 520000, revenue: 680000 },
+  { month: 'May', expenses: 490000, revenue: 710000 },
+  { month: 'Jun', expenses: 540000, revenue: 890000 },
+  { month: 'Jul', expenses: 510000, revenue: 760000 },
+  { month: 'Aug', expenses: 580000, revenue: 820000 },
+  { month: 'Sep', expenses: 843000, revenue: 950000 },
+]
+
+export const MonthlyExpenseTrendChart: React.FC<{
+  data?: MonthlyExpenseTrendData[]
+  title?: string
+}> = ({ data = defaultMonthlyExpenseTrend, title = 'Monthly Revenue vs Expenses Trajectory (Session 2024–25)' }) => {
+  return (
+    <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+      <div className="border-b border-[#edf3ef] pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+          FINANCIAL TRAJECTORY
+        </span>
+        <h3 className="font-editorial text-lg font-medium text-[#14241e]">{title}</h3>
+      </div>
+
+      <div className="h-60 w-full text-xs">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef4f0" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: '#50685e', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fill: '#50685e', fontSize: 11 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#fff', borderColor: '#c9dcd2', borderRadius: '12px', fontSize: '12px' }}
+              formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
+            />
+            <Legend wrapperStyle={{ paddingTop: '8px', fontSize: '11px' }} />
+            <Line
+              type="monotone"
+              dataKey="revenue"
+              name="Fee Revenue Collected"
+              stroke="#0e4b38"
+              strokeWidth={3}
+              dot={{ fill: '#0e4b38', r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="expenses"
+              name="Total Expenditure"
+              stroke="#dc2626"
+              strokeWidth={2}
+              strokeDasharray="5 5"
+              dot={{ fill: '#dc2626', r: 3 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------
+   A4. ADMISSIONS STATUS DONUT CHART
+------------------------------------------------------------- */
+export interface AdmissionsStatusData {
+  status: string
+  count: number
+  color: string
+}
+
+const defaultAdmissionsStatusData: AdmissionsStatusData[] = [
+  { status: 'Admitted', count: 12, color: '#0e4b38' },
+  { status: 'Shortlisted', count: 8, color: '#2563eb' },
+  { status: 'Under Review', count: 5, color: '#d97706' },
+  { status: 'Waitlisted', count: 4, color: '#7c3aed' },
+  { status: 'Rejected', count: 3, color: '#dc2626' },
+]
+
+export const AdmissionsStatusDonutChart: React.FC<{
+  data?: AdmissionsStatusData[]
+  title?: string
+}> = ({ data = defaultAdmissionsStatusData, title = 'Admissions Applications Status Distribution' }) => {
+  const total = data.reduce((acc, curr) => acc + curr.count, 0)
+
+  return (
+    <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+      <div className="border-b border-[#edf3ef] pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+          ADMISSIONS PIPELINE
+        </span>
+        <h3 className="font-editorial text-lg font-medium text-[#14241e]">{title}</h3>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+        <div className="h-52 w-full text-xs relative flex items-center justify-center">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie data={data} cx="50%" cy="50%" innerRadius={50} outerRadius={72} paddingAngle={4} dataKey="count">
+                {data.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(val: any) => [`${val} Applications`, '']}
+                contentStyle={{ backgroundColor: '#fff', borderColor: '#c9dcd2', borderRadius: '12px', fontSize: '12px' }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-[9px] uppercase font-bold text-[#7e948c]">Total</span>
+            <span className="font-editorial text-base font-bold text-[#14241e]">{total}</span>
+          </div>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          {data.map((item) => {
+            const pct = Math.round((item.count / total) * 100)
+            return (
+              <div key={item.status} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+                  <span className="font-medium text-[#14241e]">{item.status}</span>
+                </div>
+                <div className="text-right">
+                  <span className="font-bold text-[#14241e]">{item.count}</span>
+                  <span className="text-[10px] text-[#7e948c] ml-1">({pct}%)</span>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------
+   A5. FEE COLLECTION VS DUES RECOVERY AREA CHART
+------------------------------------------------------------- */
+export interface FeeRecoveryTrendData {
+  month: string
+  collected: number
+  outstanding: number
+  overdue: number
+}
+
+const defaultFeeRecoveryTrend: FeeRecoveryTrendData[] = [
+  { month: 'Apr', collected: 480000, outstanding: 120000, overdue: 30000 },
+  { month: 'May', collected: 520000, outstanding: 95000, overdue: 25000 },
+  { month: 'Jun', collected: 680000, outstanding: 85000, overdue: 40000 },
+  { month: 'Jul', collected: 710000, outstanding: 70000, overdue: 20000 },
+  { month: 'Aug', collected: 820000, outstanding: 60000, overdue: 35000 },
+  { month: 'Sep', collected: 950000, outstanding: 270000, overdue: 60000 },
+]
+
+export const FeeRecoveryTrendAreaChart: React.FC<{
+  data?: FeeRecoveryTrendData[]
+  title?: string
+}> = ({ data = defaultFeeRecoveryTrend, title = 'Monthly Fee Collection & Outstanding Dues Trend' }) => {
+  return (
+    <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+      <div className="border-b border-[#edf3ef] pb-3">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+          FEE RECOVERY ANALYTICS
+        </span>
+        <h3 className="font-editorial text-lg font-medium text-[#14241e]">{title}</h3>
+      </div>
+
+      <div className="h-60 w-full text-xs">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data} margin={{ top: 10, right: 10, left: 15, bottom: 0 }}>
+            <defs>
+              <linearGradient id="collectedGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#0e4b38" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#0e4b38" stopOpacity={0.0} />
+              </linearGradient>
+              <linearGradient id="outstandingGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#d97706" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#d97706" stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#eef4f0" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: '#50685e', fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis
+              tick={{ fill: '#50685e', fontSize: 10 }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`}
+            />
+            <Tooltip
+              contentStyle={{ backgroundColor: '#fff', borderColor: '#c9dcd2', borderRadius: '12px', fontSize: '12px' }}
+              formatter={(val: any) => [`₹${Number(val).toLocaleString('en-IN')}`, '']}
+            />
+            <Legend wrapperStyle={{ paddingTop: '8px', fontSize: '11px' }} />
+            <Area type="monotone" dataKey="collected" name="Collected" stroke="#0e4b38" strokeWidth={2} fill="url(#collectedGrad)" />
+            <Area type="monotone" dataKey="outstanding" name="Outstanding" stroke="#d97706" strokeWidth={2} fill="url(#outstandingGrad)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+}

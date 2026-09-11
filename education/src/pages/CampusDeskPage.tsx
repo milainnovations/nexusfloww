@@ -17,6 +17,10 @@ import {
   CheckCircle2,
   TrendingUp,
   TrendingDown,
+  Briefcase,
+  Library,
+  BookMarked,
+  RotateCcw,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useErpData } from '../context/ErpDataContext'
@@ -35,8 +39,354 @@ import {
   StudentTermProgressLineChart,
   TransportUtilizationBarChart,
 } from '../components/analytics/AnalyticsCharts'
+import {
+  ExpenseCategoryBarChart,
+  BudgetUtilisationDonutChart,
+  FeeRecoveryTrendAreaChart,
+  AdmissionsStatusDonutChart,
+} from '../components/analytics/AnalyticsCharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { Upload } from 'lucide-react'
 import type { Student } from '../data/mockData'
+
+/* ============================================================
+   ATTENDANCE GENDER DASHBOARD — inline component
+   Used only on the Principal / Super Admin desk
+============================================================ */
+const COLORS = {
+  boysPresent: '#0e4b38',
+  boysAbsent: '#d1e8de',
+  girlsPresent: '#1d6b50',
+  girlsAbsent: '#fde68a',
+  classPresent: '#0e4b38',
+  classAbsent: '#e2ece6',
+}
+
+function buildPieData(
+  subset: Student[],
+  label: string
+): { name: string; value: number; color: string }[] {
+  if (subset.length === 0) return []
+  const totalPresent = subset.reduce((a, s) => a + s.classesPresent, 0)
+  const totalClasses = subset.reduce((a, s) => a + s.totalClasses, 0)
+  const totalAbsent = totalClasses - totalPresent
+  const pct = totalClasses > 0 ? Math.round((totalPresent / totalClasses) * 100) : 0
+  return [
+    { name: `${label} Present (${pct}%)`, value: totalPresent, color: label === 'Boys' ? COLORS.boysPresent : COLORS.girlsPresent },
+    { name: `${label} Absent`, value: Math.max(totalAbsent, 0), color: label === 'Boys' ? COLORS.boysAbsent : COLORS.girlsAbsent },
+  ]
+}
+
+const CUSTOM_LABEL = ({
+  cx, cy, midAngle, innerRadius, outerRadius, percent,
+}: {
+  cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number
+}) => {
+  if (percent < 0.05) return null
+  const RADIAN = Math.PI / 180
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.55
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  return (
+    <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight="700">
+      {`${(percent * 100).toFixed(0)}%`}
+    </text>
+  )
+}
+
+interface AttendanceGenderDashboardProps {
+  students: Student[]
+}
+
+const AttendanceGenderDashboard: React.FC<AttendanceGenderDashboardProps> = ({ students }) => {
+  const [selectedClass, setSelectedClass] = React.useState<string>('All Classes')
+
+  const allClasses = ['All Classes', ...Array.from(new Set(students.map((s) => s.classGrade))).sort()]
+
+  const filtered = selectedClass === 'All Classes'
+    ? students
+    : students.filter((s) => s.classGrade === selectedClass)
+
+  const boys = filtered.filter((s) => s.gender === 'Male')
+  const girls = filtered.filter((s) => s.gender === 'Female')
+
+  // Chart 1: Boys + Girls combined donut (present vs absent split by gender)
+  const combinedData = (() => {
+    const boysPresent = boys.reduce((a, s) => a + s.classesPresent, 0)
+    const girlsPresent = girls.reduce((a, s) => a + s.classesPresent, 0)
+    const boysAbsent = boys.reduce((a, s) => a + (s.totalClasses - s.classesPresent), 0)
+    const girlsAbsent = girls.reduce((a, s) => a + (s.totalClasses - s.classesPresent), 0)
+    return [
+      { name: 'Boys Present', value: boysPresent, color: '#0e4b38' },
+      { name: 'Girls Present', value: girlsPresent, color: '#16a34a' },
+      { name: 'Boys Absent', value: Math.max(boysAbsent, 0), color: '#c8dfd6' },
+      { name: 'Girls Absent', value: Math.max(girlsAbsent, 0), color: '#fde68a' },
+    ].filter((d) => d.value > 0)
+  })()
+
+  const totalCombinedClasses = filtered.reduce((a, s) => a + s.totalClasses, 0)
+  const totalCombinedPresent = filtered.reduce((a, s) => a + s.classesPresent, 0)
+  const overallPct = totalCombinedClasses > 0
+    ? Math.round((totalCombinedPresent / totalCombinedClasses) * 100)
+    : 0
+
+  // Chart 2: Boys — overall + per class
+  const boysClassData = (() => {
+    if (selectedClass !== 'All Classes') return buildPieData(boys, 'Boys')
+    const byClass = Array.from(new Set(boys.map((s) => s.classGrade))).sort()
+    return byClass.map((cls, i) => {
+      const group = boys.filter((s) => s.classGrade === cls)
+      const present = group.reduce((a, s) => a + s.classesPresent, 0)
+      const total = group.reduce((a, s) => a + s.totalClasses, 0)
+      const shades = ['#0e4b38', '#145c47', '#1a7057', '#208568', '#279b7a']
+      return { name: `${cls} (${total > 0 ? Math.round((present / total) * 100) : 0}%)`, value: present, color: shades[i % shades.length] }
+    }).filter((d) => d.value > 0)
+  })()
+
+  const boysTotalPresent = boys.reduce((a, s) => a + s.classesPresent, 0)
+  const boysTotalClasses = boys.reduce((a, s) => a + s.totalClasses, 0)
+  const boysPct = boysTotalClasses > 0 ? Math.round((boysTotalPresent / boysTotalClasses) * 100) : 0
+
+  // Chart 3: Girls — overall + per class
+  const girlsClassData = (() => {
+    if (selectedClass !== 'All Classes') return buildPieData(girls, 'Girls')
+    const byClass = Array.from(new Set(girls.map((s) => s.classGrade))).sort()
+    return byClass.map((cls, i) => {
+      const group = girls.filter((s) => s.classGrade === cls)
+      const present = group.reduce((a, s) => a + s.classesPresent, 0)
+      const total = group.reduce((a, s) => a + s.totalClasses, 0)
+      const shades = ['#7c3aed', '#6d28d9', '#5b21b6', '#9333ea', '#a855f7']
+      return { name: `${cls} (${total > 0 ? Math.round((present / total) * 100) : 0}%)`, value: present, color: shades[i % shades.length] }
+    }).filter((d) => d.value > 0)
+  })()
+
+  const girlsTotalPresent = girls.reduce((a, s) => a + s.classesPresent, 0)
+  const girlsTotalClasses = girls.reduce((a, s) => a + s.totalClasses, 0)
+  const girlsPct = girlsTotalClasses > 0 ? Math.round((girlsTotalPresent / girlsTotalClasses) * 100) : 0
+
+  const tooltipStyle = {
+    backgroundColor: '#fff', borderColor: '#c9dcd2',
+    borderRadius: '12px', fontSize: '12px',
+    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.08)',
+  }
+
+  return (
+    <div className="space-y-5">
+      {/* Header row with class filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-0.5">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">
+            ATTENDANCE GENDER ANALYTICS
+          </span>
+          <h2 className="font-editorial text-2xl font-normal text-[#14241e]">
+            Boys & Girls Attendance Breakdown
+          </h2>
+        </div>
+        {/* Class dropdown */}
+        <div className="flex items-center gap-2 shrink-0">
+          <label className="text-xs font-semibold text-[#50685e]">Filter by class:</label>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="rounded-xl border border-[#c9dcd2] bg-white px-3 py-2 text-xs font-medium text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden shadow-2xs"
+          >
+            {allClasses.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* 3 pie charts in a row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+        {/* Chart 1 — Boys + Girls combined */}
+        <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+          <div className="border-b border-[#edf3ef] pb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+              COMBINED VIEW
+            </span>
+            <h3 className="font-editorial text-base font-medium text-[#14241e]">
+              {selectedClass === 'All Classes' ? 'All Classes — Boys & Girls' : `${selectedClass} — Boys & Girls`}
+            </h3>
+          </div>
+          <div className="relative flex items-center justify-center" style={{ height: 200 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={combinedData}
+                  cx="50%" cy="50%"
+                  innerRadius={52} outerRadius={78}
+                  paddingAngle={3} dataKey="value"
+                  labelLine={false}
+                  label={CUSTOM_LABEL}
+                >
+                  {combinedData.map((entry, i) => (
+                    <Cell key={i} fill={entry.color} stroke="none" />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={(val: number) => [`${val} periods`, '']}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+            {/* Centre label */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+              <span className="text-[9px] font-bold uppercase text-[#7e948c]">Overall</span>
+              <span className="font-editorial text-xl font-bold text-[#14241e]">{overallPct}%</span>
+            </div>
+          </div>
+          {/* Legend */}
+          <div className="space-y-1.5 pt-1">
+            {combinedData.map((item) => (
+              <div key={item.name} className="flex items-center justify-between text-[11px]">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                  <span className="font-medium text-[#14241e]">{item.name}</span>
+                </div>
+                <span className="font-bold text-[#14241e]">{item.value}</span>
+              </div>
+            ))}
+          </div>
+          {/* Summary row */}
+          <div className="mt-2 flex justify-between rounded-xl bg-[#f4f8f5] px-3 py-2 text-[11px]">
+            <span className="text-[#50685e]">Boys: <strong>{boys.length}</strong></span>
+            <span className="text-[#50685e]">Girls: <strong>{girls.length}</strong></span>
+            <span className="text-[#0e4b38] font-bold">Total: {filtered.length}</span>
+          </div>
+        </div>
+
+        {/* Chart 2 — Boys */}
+        <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+          <div className="border-b border-[#edf3ef] pb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+              BOYS ATTENDANCE
+            </span>
+            <h3 className="font-editorial text-base font-medium text-[#14241e]">
+              {selectedClass === 'All Classes' ? 'Boys — Class-wise Breakdown' : `Boys — ${selectedClass}`}
+            </h3>
+          </div>
+          {boys.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-xs text-[#82968e]">
+              No male students in selection
+            </div>
+          ) : (
+            <>
+              <div className="relative flex items-center justify-center" style={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={boysClassData}
+                      cx="50%" cy="50%"
+                      innerRadius={52} outerRadius={78}
+                      paddingAngle={3} dataKey="value"
+                      labelLine={false}
+                      label={CUSTOM_LABEL}
+                    >
+                      {boysClassData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      formatter={(val: number) => [`${val} periods attended`, '']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[9px] font-bold uppercase text-[#7e948c]">Boys Avg</span>
+                  <span className="font-editorial text-xl font-bold text-[#0e4b38]">{boysPct}%</span>
+                </div>
+              </div>
+              <div className="space-y-1.5 pt-1">
+                {boysClassData.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="font-medium text-[#14241e] truncate max-w-[160px]">{item.name}</span>
+                    </div>
+                    <span className="font-bold text-[#14241e] shrink-0 ml-2">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between rounded-xl bg-[#f4f8f5] px-3 py-2 text-[11px]">
+                <span className="text-[#50685e]">{boys.length} male students</span>
+                <span className={`font-bold ${boysPct < 75 ? 'text-[#b91c1c]' : 'text-[#0e4b38]'}`}>
+                  {boysPct}% present
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Chart 3 — Girls */}
+        <div className="rounded-2xl border border-[#e2ece6] bg-white p-5 shadow-bluke-sm space-y-3">
+          <div className="border-b border-[#edf3ef] pb-3">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7e948c]">
+              GIRLS ATTENDANCE
+            </span>
+            <h3 className="font-editorial text-base font-medium text-[#14241e]">
+              {selectedClass === 'All Classes' ? 'Girls — Class-wise Breakdown' : `Girls — ${selectedClass}`}
+            </h3>
+          </div>
+          {girls.length === 0 ? (
+            <div className="flex h-48 items-center justify-center text-xs text-[#82968e]">
+              No female students in selection
+            </div>
+          ) : (
+            <>
+              <div className="relative flex items-center justify-center" style={{ height: 200 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={girlsClassData}
+                      cx="50%" cy="50%"
+                      innerRadius={52} outerRadius={78}
+                      paddingAngle={3} dataKey="value"
+                      labelLine={false}
+                      label={CUSTOM_LABEL}
+                    >
+                      {girlsClassData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      formatter={(val: number) => [`${val} periods attended`, '']}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-[9px] font-bold uppercase text-[#7e948c]">Girls Avg</span>
+                  <span className="font-editorial text-xl font-bold text-[#7c3aed]">{girlsPct}%</span>
+                </div>
+              </div>
+              <div className="space-y-1.5 pt-1">
+                {girlsClassData.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-[11px]">
+                    <div className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
+                      <span className="font-medium text-[#14241e] truncate max-w-[160px]">{item.name}</span>
+                    </div>
+                    <span className="font-bold text-[#14241e] shrink-0 ml-2">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between rounded-xl bg-[#f4f8f5] px-3 py-2 text-[11px]">
+                <span className="text-[#50685e]">{girls.length} female students</span>
+                <span className={`font-bold ${girlsPct < 75 ? 'text-[#b91c1c]' : 'text-[#7c3aed]'}`}>
+                  {girlsPct}% present
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+
+      </div>
+    </div>
+  )
+}
 
 export const CampusDeskPage: React.FC = () => {
   const navigate = useNavigate()
@@ -46,6 +396,8 @@ export const CampusDeskPage: React.FC = () => {
     timetableSlots,
     exams,
     invoices,
+    libraryBooks,
+    bookIssues,
     enrolledStudentsCount,
     facultyCount,
     totalFeesOutstanding,
@@ -53,6 +405,7 @@ export const CampusDeskPage: React.FC = () => {
     attendanceWatchCount,
     lowAttendanceStudents,
     activeClassesCount,
+    overdueCount,
     addStudent,
     addInvoice,
     addExam,
@@ -754,6 +1107,417 @@ export const CampusDeskPage: React.FC = () => {
   }
 
   /* -------------------------------------------------------------
+     VIEW 2.3: LIBRARY ADMIN DESK
+  ------------------------------------------------------------- */
+  if (role === 'Library Admin') {
+    const totalTitles = libraryBooks.length
+    const totalCopies = libraryBooks.reduce((acc, b) => acc + b.totalCopies, 0)
+    const copiesAvailable = libraryBooks.reduce((acc, b) => acc + b.copiesAvailable, 0)
+    const activeIssues = bookIssues.filter((i) => i.status === 'Issued')
+    const overdueBooks = bookIssues.filter((i) => i.status === 'Overdue')
+
+    return (
+      <div className="space-y-8 pb-12">
+        {/* Welcome Banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-[#dfeae3] bg-[#f4f8f5] p-6 sm:p-8">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            <div className="max-w-2xl space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#6b857a]">
+                {todayFormatted} • GREENWOOD LIBRARY ADMINISTRATION
+              </div>
+              <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#122b22] tracking-tight">
+                Library Desk: {user?.name || 'Mrs. Meenakshi Sundaram'}
+              </h1>
+              <p className="text-sm text-[#50685e] leading-relaxed">
+                Book catalog management, issue & return ledger, overdue tracking, and student library records — your complete library workspace.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/app/library')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0e4b38] px-5 py-2.5 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#125641] transition-all shrink-0"
+              >
+                <Library className="h-4 w-4" />
+                <span>Open Book Catalog</span>
+              </button>
+              <button
+                onClick={() => navigate('/app/students')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c5d8cd] bg-white px-5 py-2.5 text-xs font-semibold text-[#0e4b38] shadow-bluke-sm hover:bg-[#eef5f1] transition-all shrink-0"
+              >
+                <Users className="h-4 w-4" />
+                <span>Students Register</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Library KPI Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Total Book Titles"
+            value={totalTitles}
+            subtext={`${totalCopies} total copies in catalog`}
+            icon={BookOpen}
+            iconColor="green"
+          />
+          <StatCard
+            label="Copies Available"
+            value={copiesAvailable}
+            subtext={`${totalCopies - copiesAvailable} currently issued`}
+            icon={Library}
+            iconColor="green"
+          />
+          <StatCard
+            label="Active Issued Books"
+            value={activeIssues.length}
+            subtext="Books currently with students"
+            icon={BookMarked}
+            iconColor="green"
+          />
+          <StatCard
+            label="Overdue Returns"
+            value={overdueBooks.length}
+            subtext="Books past their return date"
+            icon={AlertTriangle}
+            iconColor={overdueBooks.length > 0 ? 'amber' : 'green'}
+          />
+        </div>
+
+        {/* Recent Issues & Overdue Books */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Active Issues */}
+          <div className="rounded-2xl border border-[#e2ece6] bg-white p-6 shadow-bluke-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#edf3ef] pb-4">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">ISSUE LEDGER</span>
+                <h3 className="font-editorial text-xl font-medium text-[#14241e]">Active Issued Books</h3>
+              </div>
+              <button
+                onClick={() => navigate('/app/library')}
+                className="text-xs font-semibold text-[#0e4b38] hover:underline flex items-center gap-1"
+              >
+                Full ledger <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {activeIssues.length === 0 ? (
+                <div className="text-xs text-[#82968e] text-center py-4">No active issues at the moment.</div>
+              ) : (
+                activeIssues.slice(0, 5).map((issue) => (
+                  <div key={issue.id} className="flex items-center justify-between rounded-xl border border-[#edf3ef] bg-[#fafcfb] p-3.5">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-semibold text-[#14241e] truncate max-w-[220px]">{issue.bookTitle}</div>
+                      <div className="text-[11px] text-[#71877e]">
+                        {issue.studentName} • {issue.classGrade}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[11px] font-semibold text-[#0e4b38]">Due: {issue.dueDate}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Overdue Books */}
+          <div className="rounded-2xl border border-[#e2ece6] bg-white p-6 shadow-bluke-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-[#edf3ef] pb-4">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">OVERDUE ALERT</span>
+                <h3 className="font-editorial text-xl font-medium text-[#14241e]">Overdue Returns</h3>
+              </div>
+              <button
+                onClick={() => navigate('/app/library')}
+                className="text-xs font-semibold text-[#0e4b38] hover:underline flex items-center gap-1"
+              >
+                Manage <ChevronRight className="h-3 w-3" />
+              </button>
+            </div>
+            <div className="space-y-2.5">
+              {overdueBooks.length === 0 ? (
+                <div className="rounded-xl bg-[#f0fdf4] border border-[#bbf7d0] p-4 text-center">
+                  <CheckCircle2 className="h-8 w-8 text-[#16a34a] mx-auto mb-1" />
+                  <div className="text-xs font-bold text-[#14532d]">No overdue books!</div>
+                  <div className="text-[11px] text-[#166534]">All issued books are within return date.</div>
+                </div>
+              ) : (
+                overdueBooks.slice(0, 5).map((issue) => (
+                  <div key={issue.id} className="flex items-center justify-between rounded-xl border border-[#fbd5d5] bg-[#fff8f8] p-3.5">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-semibold text-[#991b1b] truncate max-w-[220px]">{issue.bookTitle}</div>
+                      <div className="text-[11px] text-[#7f1d1d]">
+                        {issue.studentName} • {issue.classGrade}
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-[11px] font-bold text-[#b91c1c]">
+                        {issue.fineAmount > 0 ? `Fine: ₹${issue.fineAmount}` : `Due: ${issue.dueDate}`}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Book Catalog Quick View */}
+        <div className="rounded-2xl border border-[#e2ece6] bg-white shadow-bluke-sm overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[#edf3ef] p-5">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">BOOK CATALOG</span>
+              <h3 className="font-editorial text-xl font-medium text-[#14241e]">Library Inventory at a Glance</h3>
+            </div>
+            <button
+              onClick={() => navigate('/app/library')}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[#0e4b38] px-4 py-2 text-xs font-semibold text-white hover:bg-[#125641] transition-all"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              <span>Manage Catalog</span>
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr className="border-b border-[#edf3ef] bg-[#f8faf9] text-[11px] font-semibold uppercase tracking-wider text-[#6c8279]">
+                  <th className="py-3.5 px-5">TITLE</th>
+                  <th className="py-3.5 px-5">AUTHOR</th>
+                  <th className="py-3.5 px-5">CATEGORY</th>
+                  <th className="py-3.5 px-5">SHELF</th>
+                  <th className="py-3.5 px-5 text-center">AVAILABLE</th>
+                  <th className="py-3.5 px-5 text-center">TOTAL</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#edf3ef]">
+                {libraryBooks.map((book) => (
+                  <tr key={book.id} className="hover:bg-[#f7faf8] transition-colors">
+                    <td className="py-3.5 px-5">
+                      <div className="font-semibold text-[#14241e] max-w-[220px] truncate">{book.title}</div>
+                    </td>
+                    <td className="py-3.5 px-5 text-[#50685e]">{book.author}</td>
+                    <td className="py-3.5 px-5">
+                      <span className="inline-flex items-center rounded-lg bg-[#eaf4ee] px-2 py-0.5 text-[10px] font-semibold text-[#0e4b38]">
+                        {book.category}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5 font-mono text-[11px] text-[#71877e]">{book.shelfLocation}</td>
+                    <td className="py-3.5 px-5 text-center">
+                      <span className={`font-bold text-sm ${book.copiesAvailable === 0 ? 'text-[#b91c1c]' : 'text-[#0e4b38]'}`}>
+                        {book.copiesAvailable}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-5 text-center font-medium text-[#50685e]">{book.totalCopies}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="space-y-3">
+          <div className="space-y-0.5">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">SHORTCUTS</span>
+            <h3 className="font-editorial text-xl font-medium text-[#14241e]">Quick library actions</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            {[
+              { label: 'Issue Book to Student', subtext: 'Record a new book loan', icon: BookMarked, path: '/app/library' },
+              { label: 'Process Book Return', subtext: 'Mark a returned book & clear fine', icon: RotateCcw, path: '/app/library' },
+              { label: 'Students Register', subtext: 'Look up student details for issuing', icon: Users, path: '/app/students' },
+            ].map((action) => {
+              const Icon = action.icon
+              return (
+                <button
+                  key={action.label}
+                  onClick={() => navigate(action.path)}
+                  className="group flex items-center justify-between rounded-xl border border-[#e2ece6] bg-white p-4 text-left shadow-2xs transition-all hover:border-[#cde0d5] hover:bg-[#fafcfb]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0f7f3] text-[#0e4b38]">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-[#14241e]">{action.label}</div>
+                      <div className="text-[11px] text-[#71877e]">{action.subtext}</div>
+                    </div>
+                  </div>
+                  <ArrowRight className="h-4 w-4 text-[#8fa39b] group-hover:translate-x-1 transition-transform" />
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* -------------------------------------------------------------
+     VIEW 2.5: ADMINISTRATION DASHBOARD
+  ------------------------------------------------------------- */
+  if (role === 'Administration') {
+    const totalBudget = 8080000
+    const totalSpent = 6608000
+    const budgetUtilPct = Math.round((totalSpent / totalBudget) * 100)
+
+    return (
+      <div className="space-y-8 pb-12">
+        {/* Welcome Banner */}
+        <div className="relative overflow-hidden rounded-2xl border border-[#dfeae3] bg-[#f4f8f5] p-6 sm:p-8">
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-center">
+            <div className="max-w-2xl space-y-2">
+              <div className="text-[11px] font-bold uppercase tracking-wider text-[#6b857a]">
+                {todayFormatted} • GREENWOOD ADMINISTRATION OFFICE
+              </div>
+              <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#122b22] tracking-tight">
+                Administration Desk: {user?.name || 'Mrs. Priya Desai'}
+              </h1>
+              <p className="text-sm text-[#50685e] leading-relaxed">
+                School accounts, fee collections, expense approvals, and admissions pipeline — your complete finance & admin workspace.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/app/administration')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0e4b38] px-5 py-2.5 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#125641] transition-all shrink-0"
+              >
+                <Briefcase className="h-4 w-4" />
+                <span>Open Admin Panel</span>
+              </button>
+              <button
+                onClick={() => navigate('/app/fees')}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#c5d8cd] bg-white px-5 py-2.5 text-xs font-semibold text-[#0e4b38] shadow-bluke-sm hover:bg-[#eef5f1] transition-all shrink-0"
+              >
+                <CreditCard className="h-4 w-4" />
+                <span>Fee Collections</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Administration KPI Cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <StatCard
+            label="Budget Utilisation"
+            value={`${budgetUtilPct}%`}
+            subtext={`₹${(totalSpent / 100000).toFixed(1)}L of ₹${(totalBudget / 100000).toFixed(1)}L annual budget`}
+            icon={TrendingUp}
+            iconColor={budgetUtilPct > 90 ? 'amber' : 'green'}
+          />
+          <StatCard
+            label="Fee Revenue Collected"
+            value={formattedCollected}
+            subtext={`${overdueCount} pending/overdue invoices`}
+            icon={CreditCard}
+            iconColor="green"
+          />
+          <StatCard
+            label="Outstanding Fee Dues"
+            value={formattedFees}
+            subtext={`${students.filter(s => s.dues > 0).length} students with pending dues`}
+            icon={AlertTriangle}
+            iconColor="amber"
+          />
+          <StatCard
+            label="Enrolled Students"
+            value={enrolledStudentsCount}
+            subtext={`${activeClassesCount} active class sections`}
+            icon={Users}
+            iconColor="green"
+          />
+        </div>
+
+        {/* Admin Visual Analytics */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <ExpenseCategoryBarChart title="Expenditure by Department vs Budget" />
+          <BudgetUtilisationDonutChart title="Annual Budget Utilisation by Category" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <FeeCollectionDonutChart title="Term Fee Recovery & Settlement Breakdown" />
+          <AdmissionsStatusDonutChart title="Admissions Applications Pipeline" />
+        </div>
+
+        <FeeRecoveryTrendAreaChart title="Monthly Fee Collection & Outstanding Dues Trend" />
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 space-y-3">
+            <div className="space-y-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">QUICK ACTIONS</span>
+              <h3 className="font-editorial text-xl font-medium text-[#14241e]">Common admin tasks</h3>
+            </div>
+            <div className="space-y-2.5">
+              {[
+                { label: 'Log New Expense', subtext: 'Record a school expenditure for approval', icon: Briefcase, path: '/app/administration' },
+                { label: 'Issue Fee Invoice', subtext: 'Raise a term fee bill against a student', icon: CreditCard, path: '/app/fees' },
+                { label: 'New Admission Application', subtext: 'Register a new applicant to the pipeline', icon: Users, path: '/app/administration' },
+                { label: 'View Managerial Reports', subtext: 'Academic & financial analytics dashboard', icon: TrendingUp, path: '/app/reports' },
+              ].map((action) => {
+                const Icon = action.icon
+                return (
+                  <button
+                    key={action.label}
+                    onClick={() => navigate(action.path)}
+                    className="group flex w-full items-center justify-between rounded-xl border border-[#e2ece6] bg-white p-4 text-left shadow-2xs transition-all hover:border-[#cde0d5] hover:bg-[#fafcfb]"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#f0f7f3] text-[#0e4b38]">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-[#14241e]">{action.label}</div>
+                        <div className="text-[11px] text-[#71877e]">{action.subtext}</div>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-4 w-4 text-[#8fa39b] group-hover:translate-x-1 transition-transform" />
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Students with Fee Dues */}
+          <div className="space-y-3">
+            <div className="space-y-0.5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#7e948c]">FEE ALERTS</span>
+              <h3 className="font-editorial text-xl font-medium text-[#14241e]">Dues to follow up</h3>
+            </div>
+            <div className="space-y-2.5">
+              {students
+                .filter((s) => s.dues > 0)
+                .sort((a, b) => b.dues - a.dues)
+                .slice(0, 5)
+                .map((student) => (
+                  <div
+                    key={student.id}
+                    onClick={() => navigate('/app/fees')}
+                    className="flex items-center justify-between rounded-xl border border-[#e2ece6] bg-white p-3.5 shadow-2xs cursor-pointer hover:border-[#cde0d5] hover:bg-[#fafcfb] transition-all"
+                  >
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-semibold text-[#14241e]">{student.name}</div>
+                      <div className="text-[11px] text-[#71877e]">{student.classGrade} • {student.rollNumber}</div>
+                    </div>
+                    <span className="rounded-lg border border-[#fbd5d5] bg-[#fef2f2] px-2.5 py-1 text-xs font-bold text-[#b91c1c]">
+                      ₹{(student.dues / 1000).toFixed(0)}k
+                    </span>
+                  </div>
+                ))}
+              <button
+                onClick={() => navigate('/app/administration')}
+                className="w-full text-center text-xs font-semibold text-[#0e4b38] hover:underline py-2"
+              >
+                View full dues register →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* -------------------------------------------------------------
      VIEW 3: PRINCIPAL & SUPER ADMIN (MANAGERIAL DESK)
   ------------------------------------------------------------- */
   return (
@@ -857,6 +1621,9 @@ export const CampusDeskPage: React.FC = () => {
           <TransportUtilizationBarChart title="School Bus Fleet Seating Occupancy & Route Utilization" />
         </div>
       </div>
+
+      {/* ATTENDANCE GENDER DASHBOARD */}
+      <AttendanceGenderDashboard students={students} />
 
       {/* 3. EXCEPTIONS & SHORTCUTS */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

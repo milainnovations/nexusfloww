@@ -14,6 +14,9 @@ import {
   BarChart3,
   ShieldCheck,
   Settings,
+  Briefcase,
+  IndianRupee,
+  UserPlus,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useErpData } from '../../context/ErpDataContext'
@@ -197,6 +200,77 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
               name: 'Teachers & staff',
               path: '/app/faculty',
               icon: GraduationCap,
+            },
+          ],
+        },
+      ]
+    }
+
+    // 4. ADMINISTRATION VIEW
+    if (role === 'Administration') {
+      return [
+        {
+          title: 'ADMIN DESK',
+          items: [
+            {
+              name: 'Administration desk',
+              path: '/app/desk',
+              icon: LayoutDashboard,
+            },
+          ],
+        },
+        {
+          title: 'FINANCE & ACCOUNTS',
+          items: [
+            {
+              name: 'Expenses & budget',
+              path: '/app/administration',
+              icon: Briefcase,
+            },
+            {
+              name: 'Fee collections & dues',
+              path: '/app/fees',
+              icon: IndianRupee,
+            },
+          ],
+        },
+        {
+          title: 'ADMISSIONS',
+          items: [
+            {
+              name: 'Admissions pipeline',
+              path: '/app/administration',
+              icon: UserPlus,
+            },
+          ],
+        },
+        {
+          title: 'SCHOOL DIRECTORIES',
+          items: [
+            {
+              name: 'Students register',
+              path: '/app/students',
+              icon: Users,
+            },
+            {
+              name: 'Teachers & staff',
+              path: '/app/faculty',
+              icon: GraduationCap,
+            },
+            {
+              name: 'Transport & boarding',
+              path: '/app/hostel',
+              icon: Bus,
+            },
+          ],
+        },
+        {
+          title: 'ANALYTICS',
+          items: [
+            {
+              name: 'Financial analytics',
+              path: '/app/reports',
+              icon: BarChart3,
             },
           ],
         },

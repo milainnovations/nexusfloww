@@ -24,6 +24,7 @@ import { LibraryPage } from './pages/LibraryPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { UsersRolesPage } from './pages/UsersRolesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { AdministrationPage } from './pages/AdministrationPage'
 
 export function App() {
   return (
@@ -55,6 +56,7 @@ export function App() {
               <Route path="reports" element={<ReportsPage />} />
               <Route path="users-roles" element={<UsersRolesPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="administration" element={<AdministrationPage />} />
             </Route>
 
             {/* 4. 404 NOT FOUND */}

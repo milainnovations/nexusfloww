@@ -4,7 +4,7 @@ export interface UserProfile {
   id: string
   name: string
   email: string
-  role: 'Super Admin' | 'Principal' | 'Teacher' | 'Student' | 'Parent' | 'Library Admin'
+  role: 'Super Admin' | 'Principal' | 'Teacher' | 'Student' | 'Parent' | 'Library Admin' | 'Administration'
   avatarText: string
   institutionName: string
   campusCode: string
@@ -98,6 +98,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       name = 'Mrs. Meenakshi Sundaram'
       avatarText = 'MS'
       designation = 'Head Librarian & Learning Resource Administrator'
+    } else if (role === 'Administration') {
+      name = 'Mrs. Priya Desai'
+      avatarText = 'PD'
+      designation = 'Head of Administration & Accounts Department'
     }
 
     const newUser: UserProfile = {

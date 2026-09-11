@@ -61,6 +61,12 @@ export const LoginPage: React.FC = () => {
       email: 'library@demo.com',
     },
     {
+      role: 'Administration',
+      name: 'Mrs. Priya Desai',
+      designation: 'Head of Administration & Accounts Department',
+      email: 'admin.office@demo.com',
+    },
+    {
       role: 'Super Admin',
       name: 'Dr. Rajesh Kumar',
       designation: 'Managing Director & System Administrator',

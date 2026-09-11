@@ -27,6 +27,7 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Executive School Desk & Global Analytics',
       admin: true,
       principal: true,
+      administration: false,
       teacher: false,
       libraryAdmin: false,
       studentParent: false,
@@ -35,6 +36,7 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Admissions & Student Registration (Add/Delete)',
       admin: true,
       principal: true,
+      administration: true,
       teacher: false,
       libraryAdmin: false,
       studentParent: false,
@@ -43,6 +45,34 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Teacher & Staff Appointment & Class Assignment',
       admin: true,
       principal: true,
+      administration: false,
+      teacher: false,
+      libraryAdmin: false,
+      studentParent: false,
+    },
+    {
+      module: 'Expenses Logging, Budget Monitoring & Approval',
+      admin: true,
+      principal: false,
+      administration: true,
+      teacher: false,
+      libraryAdmin: false,
+      studentParent: false,
+    },
+    {
+      module: 'School Fee Invoicing, Collections & Dues Tracker',
+      admin: true,
+      principal: true,
+      administration: true,
+      teacher: false,
+      libraryAdmin: false,
+      studentParent: false,
+    },
+    {
+      module: 'Admissions Pipeline Management & Status Updates',
+      admin: true,
+      principal: true,
+      administration: true,
       teacher: false,
       libraryAdmin: false,
       studentParent: false,
@@ -51,6 +81,7 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Library Catalog, Book Issuing & Return Ledger Verification',
       admin: true,
       principal: true,
+      administration: false,
       teacher: false,
       libraryAdmin: true,
       studentParent: false,
@@ -59,6 +90,7 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Daily Class Attendance Marking & Submissions',
       admin: true,
       principal: true,
+      administration: false,
       teacher: true,
       libraryAdmin: false,
       studentParent: false,
@@ -67,6 +99,7 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Assessment Scheduling, Marks Entry & Auto-Grading',
       admin: true,
       principal: true,
+      administration: false,
       teacher: true,
       libraryAdmin: false,
       studentParent: false,
@@ -75,25 +108,28 @@ export const UsersRolesPage: React.FC = () => {
       module: 'Official Progress Report Card View & Print',
       admin: true,
       principal: true,
+      administration: false,
       teacher: true,
       libraryAdmin: false,
       studentParent: true,
     },
     {
-      module: 'School Fee Invoicing, Collections & Dues Tracker',
-      admin: true,
-      principal: true,
-      teacher: false,
-      libraryAdmin: false,
-      studentParent: false,
-    },
-    {
       module: 'Online School Fee Payment & Official Receipt Generator',
       admin: true,
       principal: true,
+      administration: true,
       teacher: false,
       libraryAdmin: false,
       studentParent: true,
+    },
+    {
+      module: 'Financial Analytics & Budget Reports',
+      admin: true,
+      principal: true,
+      administration: true,
+      teacher: false,
+      libraryAdmin: false,
+      studentParent: false,
     },
   ]
 
@@ -217,6 +253,7 @@ export const UsersRolesPage: React.FC = () => {
                 <th className="py-3 px-4">MODULE CAPABILITY</th>
                 <th className="py-3 px-4 text-center">SUPER ADMIN</th>
                 <th className="py-3 px-4 text-center">PRINCIPAL</th>
+                <th className="py-3 px-4 text-center">ADMINISTRATION</th>
                 <th className="py-3 px-4 text-center">TEACHER</th>
                 <th className="py-3 px-4 text-center">LIBRARY ADMIN</th>
                 <th className="py-3 px-4 text-center">STUDENT / PARENT</th>
@@ -235,6 +272,13 @@ export const UsersRolesPage: React.FC = () => {
                   </td>
                   <td className="py-3 px-4 text-center">
                     {item.principal ? (
+                      <CheckCircle2 className="h-4 w-4 text-[#16a34a] mx-auto" />
+                    ) : (
+                      <Lock className="h-3.5 w-3.5 text-[#9ca3af] mx-auto" />
+                    )}
+                  </td>
+                  <td className="py-3 px-4 text-center">
+                    {item.administration ? (
                       <CheckCircle2 className="h-4 w-4 text-[#16a34a] mx-auto" />
                     ) : (
                       <Lock className="h-3.5 w-3.5 text-[#9ca3af] mx-auto" />
