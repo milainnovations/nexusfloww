@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: greenwood-school-erp
+    runtime: static
+    buildCommand: cd education && npm install && npm run build
+    staticPublishPath: education/dist
+    pullRequestPreviewsEnabled: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
