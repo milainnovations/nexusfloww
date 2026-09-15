@@ -16,9 +16,10 @@ interface TopHeaderProps {
 export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
   const location = useLocation()
   const navigate = useNavigate()
-  const { user, logout, activeInstitution, institutions, setInstitution } = useAuth()
+  const { user, logout, activeInstitution, institutions, setInstitution, switchRole } = useAuth()
 
   const [showTenantMenu, setShowTenantMenu] = useState(false)
+  const [showRoleMenu, setShowRoleMenu] = useState(false)
 
   // Map path to title
   const getPageTitle = () => {
@@ -110,13 +111,57 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
 
       {/* Right: Role Switcher, Profile & Logout */}
       <div className="flex items-center gap-3">
-        {/* Static Role Identity Badge */}
-        <div className="flex items-center gap-2 rounded-full border border-[#d6e3dc] bg-[#f7faf8] px-3 py-1.5 text-xs font-medium text-[#0e4b38] shadow-2xs">
-          <Shield className="h-3.5 w-3.5 text-[#0e4b38]" />
-          <span className="font-semibold">Role: {user?.role || 'Principal'}</span>
-          <span className="rounded bg-[#e2ece6] px-1.5 py-0.5 text-[9px] font-bold text-[#0e4b38] uppercase">
-            Active
-          </span>
+        {/* Interactive Role Identity Switcher Badge */}
+        <div className="relative">
+          <button
+            onClick={() => setShowRoleMenu(!showRoleMenu)}
+            className="flex items-center gap-2 rounded-full border border-[#d6e3dc] bg-[#f7faf8] px-3 py-1.5 text-xs font-medium text-[#0e4b38] shadow-2xs hover:bg-[#eaf4ee] hover:border-[#0e4b38] transition-all"
+            title="Click to switch demo role (Live RBAC)"
+          >
+            <Shield className="h-3.5 w-3.5 text-[#0e4b38]" />
+            <span className="font-semibold">Role: {user?.role || 'Principal'}</span>
+            <span className="rounded bg-[#e2ece6] px-1.5 py-0.5 text-[9px] font-bold text-[#0e4b38] uppercase">
+              Switch ▾
+            </span>
+          </button>
+
+          {showRoleMenu && (
+            <div className="absolute right-0 top-full mt-1.5 w-72 rounded-xl border border-[#d6e3dc] bg-white p-2 shadow-bluke-dropdown z-50">
+              <div className="px-2 py-1 text-[10px] font-bold text-[#82968e] uppercase tracking-wider">
+                Switch Role Persona (Test Data Isolation)
+              </div>
+              {[
+                { role: 'Student' as const, name: 'Rahul Sharma (Class 8-A)', sub: 'Student Profile (SCH-8A-01)' },
+                { role: 'Parent' as const, name: 'Mr. Suresh Sharma', sub: 'Parent of Rahul Sharma' },
+                { role: 'Teacher' as const, name: 'Prof. Vikram Singh', sub: 'Mathematics Faculty & Class 8-A Teacher' },
+                { role: 'Library Admin' as const, name: 'Mrs. Meenakshi Sundaram', sub: 'Central Library Head' },
+                { role: 'Administration' as const, name: 'Mrs. Priya Desai', sub: 'Accounts & Administration Office' },
+                { role: 'Principal' as const, name: 'Dr. Anita Sharma', sub: 'Executive Principal & Academic Head' },
+                { role: 'Super Admin' as const, name: 'Dr. Rajesh Kumar', sub: 'Managing Director & System Admin' },
+              ].map((item) => (
+                <button
+                  key={item.role}
+                  onClick={() => {
+                    switchRole(item.role)
+                    setShowRoleMenu(false)
+                  }}
+                  className={`flex w-full flex-col rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors ${
+                    user?.role === item.role
+                      ? 'bg-[#f4f8f5] text-[#0e4b38] font-semibold'
+                      : 'text-[#485c54] hover:bg-[#f7faf8]'
+                  }`}
+                >
+                  <div className="font-medium flex items-center justify-between">
+                    <span>{item.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#e2ece6] text-[#0e4b38] font-bold">
+                      {item.role}
+                    </span>
+                  </div>
+                  <div className="text-[10.5px] text-[#71877e]">{item.sub}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* User Card */}

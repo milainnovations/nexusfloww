@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, Navigate } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { TopHeader } from './TopHeader'
+import { ProfileChatbot } from '../chat/ProfileChatbot'
 import { useAuth } from '../../context/AuthContext'
 
 export const ErpLayout: React.FC = () => {
@@ -26,6 +27,10 @@ export const ErpLayout: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Profile-Scoped AI Chatbot in Bottom Right Corner */}
+      <ProfileChatbot />
     </div>
   )
 }
+
