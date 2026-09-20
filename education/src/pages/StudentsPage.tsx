@@ -24,6 +24,7 @@ export const StudentsPage: React.FC = () => {
   const isTeacher = role === 'Teacher'
   const isStudent = role === 'Student'
   const isParent = role === 'Parent'
+  const isLibraryAdmin = role === 'Library Admin'
   const isStudentOrParent = isStudent || isParent
   const userClass = user?.assignedClass || 'Class 8-A'
 
@@ -116,7 +117,7 @@ export const StudentsPage: React.FC = () => {
             <span>Export CSV</span>
           </button>
 
-          {!isStudentOrParent && (
+          {!isStudentOrParent && !isLibraryAdmin && (
             <button
               onClick={() => setShowEnrolModal(true)}
               className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#0e4b38] px-4 py-2 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#125641] transition-all"
@@ -336,7 +337,7 @@ export const StudentsPage: React.FC = () => {
               <div className="text-[#50685e] mt-1 italic">"{selectedStudent.remarks}"</div>
             </div>
 
-            {!isStudentOrParent && (
+            {!isStudentOrParent && !isLibraryAdmin && (
               <div className="flex flex-col gap-2 pt-2">
                 <button
                   onClick={() => setShowWhatsAppModal(true)}
