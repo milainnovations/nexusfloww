@@ -5,23 +5,28 @@ import {
   EyeOff,
   ArrowRight,
   Sparkles,
+  Loader2,
+  AlertCircle,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import type { UserProfile } from '../context/AuthContext'
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, loginDemo, authError, clearError, isLoading } = useAuth()
 
   const [email, setEmail] = useState('principal@demo.com')
-  const [password, setPassword] = useState('••••••••••••')
+  const [password, setPassword] = useState('Demo@1234')
   const [showPassword, setShowPassword] = useState(false)
-  const [selectedRole, setSelectedRole] = useState<UserProfile['role']>('Principal')
+  const [localLoading, setLocalLoading] = useState(false)
 
-  const handleSignIn = (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    login(email, selectedRole)
-    navigate('/app/desk')
+    clearError()
+    setLocalLoading(true)
+    const ok = await login(email, password)
+    setLocalLoading(false)
+    if (ok) navigate('/app/desk')
   }
 
   const quickRoles: {
@@ -74,12 +79,16 @@ export const LoginPage: React.FC = () => {
     },
   ]
 
-  const handleQuickLogin = (roleItem: (typeof quickRoles)[0]) => {
-    setSelectedRole(roleItem.role)
+  const handleQuickLogin = async (roleItem: (typeof quickRoles)[0]) => {
+    clearError()
+    setLocalLoading(true)
     setEmail(roleItem.email)
-    login(roleItem.email, roleItem.role)
-    navigate('/app/desk')
+    const ok = await loginDemo(roleItem.email, roleItem.role)
+    setLocalLoading(false)
+    if (ok) navigate('/app/desk')
   }
+
+  const busy = localLoading || isLoading
 
   return (
     <div className="flex min-h-screen w-full flex-col lg:flex-row bg-white">
@@ -106,7 +115,7 @@ export const LoginPage: React.FC = () => {
         <div className="relative z-10 my-12 max-w-lg space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3.5 py-1 text-[11px] font-semibold uppercase tracking-widest text-[#a7d7c2] backdrop-blur-xs">
             <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
-            ONE ORDERLY SCHOOL WORKSPACE
+            LIVE DATABASE CONNECTED
           </div>
 
           <h1 className="font-editorial text-4xl sm:text-5xl lg:text-[50px] font-normal leading-[1.12] text-white tracking-tight">
@@ -132,7 +141,7 @@ export const LoginPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-2">
               <span className="h-1.5 w-1.5 rounded-full bg-[#34d399]" />
-              <span>Live Attendance Sync</span>
+              <span>Live Supabase DB</span>
             </div>
           </div>
         </div>
@@ -149,9 +158,20 @@ export const LoginPage: React.FC = () => {
               Sign in to School Office
             </h2>
             <p className="text-xs text-[#50685e]">
-              Select a demo role below for 1-click instant login or enter your registered email.
+              Select a demo role below for 1-click instant login or enter your registered credentials.
             </p>
           </div>
+
+          {/* Auth Error Banner */}
+          {authError && (
+            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-xs text-red-700">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <div>
+                <p className="font-semibold">Sign-in failed</p>
+                <p className="font-normal opacity-80 mt-0.5">{authError}</p>
+              </div>
+            </div>
+          )}
 
           {/* 1-Click Quick Role Switcher Buttons */}
           <div className="space-y-2">
@@ -167,8 +187,9 @@ export const LoginPage: React.FC = () => {
                 <button
                   key={item.role}
                   type="button"
+                  disabled={busy}
                   onClick={() => handleQuickLogin(item)}
-                  className="group flex w-full items-center justify-between rounded-xl border border-[#d6e3dc] bg-white p-3 text-left shadow-2xs hover:border-[#0e4b38] hover:bg-[#f4f8f5] transition-all"
+                  className="group flex w-full items-center justify-between rounded-xl border border-[#d6e3dc] bg-white p-3 text-left shadow-2xs hover:border-[#0e4b38] hover:bg-[#f4f8f5] transition-all disabled:opacity-60 disabled:cursor-wait"
                 >
                   <div className="flex items-center gap-3">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#eaf4ee] text-[#0e4b38] font-bold text-xs group-hover:bg-[#0e4b38] group-hover:text-white transition-colors">
@@ -184,7 +205,11 @@ export const LoginPage: React.FC = () => {
                       <div className="text-[11px] text-[#71877e]">{item.designation}</div>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-[#8fa39b] group-hover:translate-x-1 group-hover:text-[#0e4b38] transition-all" />
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 text-[#8fa39b] animate-spin" />
+                  ) : (
+                    <ArrowRight className="h-4 w-4 text-[#8fa39b] group-hover:translate-x-1 group-hover:text-[#0e4b38] transition-all" />
+                  )}
                 </button>
               ))}
             </div>
@@ -201,7 +226,7 @@ export const LoginPage: React.FC = () => {
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-[#14241e] mb-1">
-                Registered Email
+                Email
               </label>
               <input
                 type="email"
@@ -236,11 +261,25 @@ export const LoginPage: React.FC = () => {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-[#0e4b38] py-3 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#125641] transition-all flex items-center justify-center gap-2"
+              disabled={busy}
+              className="w-full rounded-xl bg-[#0e4b38] py-3 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#125641] transition-all flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
             >
-              <span>Enter School Workspace</span>
-              <ArrowRight className="h-4 w-4" />
+              {busy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Signing in…</span>
+                </>
+              ) : (
+                <>
+                  <span>Enter School Workspace</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </button>
+
+            <p className="text-center text-[10.5px] text-[#82968e]">
+              Demo accounts use password: <span className="font-bold text-[#0e4b38]">Demo@1234</span>
+            </p>
           </form>
         </div>
       </div>

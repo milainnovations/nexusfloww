@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
-import { ErpDataProvider } from './context/ErpDataContext'
+import { ErpDataProvider, useErpData } from './context/ErpDataContext'
+import { LoadingScreen } from './components/common/LoadingScreen'
 
 // Landing Site Layout & Pages
 import { Layout } from './components/layout/Layout'
@@ -26,6 +27,16 @@ import { UsersRolesPage } from './pages/UsersRolesPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { AdministrationPage } from './pages/AdministrationPage'
 
+function ErpRoutesWrapper() {
+  const { isLoading } = useErpData()
+
+  if (isLoading) {
+    return <LoadingScreen message="Syncing Live Supabase Database..." />
+  }
+
+  return <ErpLayout />
+}
+
 export function App() {
   return (
     <AuthProvider>
@@ -41,7 +52,7 @@ export function App() {
             <Route path="/login" element={<LoginPage />} />
 
             {/* 3. CAMPUS OFFICE ERP WORKSPACE */}
-            <Route path="/app" element={<ErpLayout />}>
+            <Route path="/app" element={<ErpRoutesWrapper />}>
               <Route index element={<CampusDeskPage />} />
               <Route path="desk" element={<CampusDeskPage />} />
               <Route path="students" element={<StudentsPage />} />

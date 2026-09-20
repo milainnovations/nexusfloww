@@ -6,8 +6,10 @@ import {
   ChevronDown,
   Building2,
   Shield,
+  KeyRound,
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { ChangePasswordModal } from '../common/ChangePasswordModal'
 
 interface TopHeaderProps {
   onToggleSidebar: () => void
@@ -20,6 +22,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
 
   const [showTenantMenu, setShowTenantMenu] = useState(false)
   const [showRoleMenu, setShowRoleMenu] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
 
   // Map path to title
   const getPageTitle = () => {
@@ -180,6 +183,14 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
           </div>
 
           <button
+            onClick={() => setShowPasswordModal(true)}
+            title="Change Account Password"
+            className="rounded-lg p-2 text-[#71877e] hover:bg-[#eef5f1] hover:text-[#0e4b38] transition-colors"
+          >
+            <KeyRound className="h-4 w-4" />
+          </button>
+
+          <button
             onClick={handleLogout}
             title="Sign out"
             className="rounded-lg p-2 text-[#71877e] hover:bg-[#fef2f2] hover:text-[#b91c1c] transition-colors"
@@ -188,6 +199,13 @@ export const TopHeader: React.FC<TopHeaderProps> = ({ onToggleSidebar }) => {
           </button>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={showPasswordModal || !!user?.mustChangePassword}
+        onClose={() => setShowPasswordModal(false)}
+        isForced={!!user?.mustChangePassword}
+      />
     </header>
   )
 }

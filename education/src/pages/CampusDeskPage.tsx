@@ -28,6 +28,7 @@ import { StatCard } from '../components/common/StatCard'
 import { Modal } from '../components/common/Modal'
 import { Drawer } from '../components/common/Drawer'
 import { Badge } from '../components/common/Badge'
+import { EnrolStudentModal } from '../components/common/EnrolStudentModal'
 import {
   AcademicPerformanceBarChart,
   FeeCollectionDonutChart,
@@ -409,7 +410,6 @@ export const CampusDeskPage: React.FC = () => {
     lowAttendanceStudents,
     activeClassesCount,
     overdueCount,
-    addStudent,
     addInvoice,
     addExam,
     markInvoicePaid,
@@ -424,15 +424,7 @@ export const CampusDeskPage: React.FC = () => {
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false)
 
   // Enrol Form State
-  const [name, setName] = useState('')
-  const [rollNumber, setRollNumber] = useState('')
-  const [email, setEmail] = useState('')
-  const [classGrade, setClassGrade] = useState('Class 8-A')
-  const [section] = useState('A')
-  const [phone] = useState('+91 98765 00000')
-  const [guardianName, setGuardianName] = useState('')
-  const [guardianPhone, setGuardianPhone] = useState('')
-  const [busRoute, setBusRoute] = useState('Bus Route 04 (North City)')
+  // Handled by EnrolStudentModal component
 
   // Invoice Form State
   const [invStudentRoll, setInvStudentRoll] = useState(students[0]?.rollNumber || '')
@@ -460,8 +452,13 @@ export const CampusDeskPage: React.FC = () => {
     })
     .toUpperCase()
 
-  // Student specific data for Rahul Sharma
-  const currentStudent = students.find((s) => s.rollNumber === 'SCH-8A-01') || students[0]
+  // Resolve the logged-in student's record from the students list
+  // Try matching by rollNumber first, then by email, then fall back to first student
+  const currentStudent = (
+    (user?.rollNumber ? students.find((s) => s.rollNumber === user.rollNumber) : null) ??
+    (user?.email ? students.find((s) => s.email.toLowerCase() === user.email.toLowerCase()) : null) ??
+    students[0]
+  )
   const studentInvoices = invoices.filter((i) => i.studentRoll === currentStudent?.rollNumber)
   const pendingStudentInvoice = studentInvoices.find((i) => i.status === 'Pending' || i.status === 'Overdue')
 
@@ -469,33 +466,6 @@ export const CampusDeskPage: React.FC = () => {
   const teacherSchedule = timetableSlots.filter(
     (tt) => tt.day === 'Monday' && tt.teacher.includes('Vikram Singh')
   )
-
-  const handleEnrolSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    addStudent({
-      name,
-      rollNumber: rollNumber || `SCH-${classGrade.replace('Class ', '').replace('-', '')}-${String(students.length + 1).padStart(2, '0')}`,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@demo.com`,
-      gender: 'Male',
-      classGrade,
-      section,
-      academicYear: '2024–2025',
-      phone: phone || '+91 98765 00000',
-      busRoute,
-      guardianName: guardianName || 'Parent / Guardian',
-      guardianRelation: 'Parent',
-      guardianPhone: guardianPhone || '+91 98765 00000',
-      address: 'Bengaluru Campus',
-      dues: 0,
-      dateOfBirth: '15 Aug 2011',
-      bloodGroup: 'B+',
-      remarks: 'Newly admitted student for academic session 2024–2025.',
-    })
-    setShowEnrolModal(false)
-    setName('')
-    setRollNumber('')
-    setEmail('')
-  }
 
   const handleCreateInvoice = (e: React.FormEvent) => {
     e.preventDefault()
@@ -542,6 +512,13 @@ export const CampusDeskPage: React.FC = () => {
      VIEW 1: TEACHER DASHBOARD
   ------------------------------------------------------------- */
   if (role === 'Teacher') {
+    const teacherClass = user?.assignedClass || 'Class 8-A'
+    const teacherClassStudents = students.filter((s) => s.classGrade === teacherClass)
+    const teacherClassCount = teacherClassStudents.length > 0 ? teacherClassStudents.length : 5
+    const teacherAvgAttendance = teacherClassStudents.length > 0
+      ? (teacherClassStudents.reduce((acc, s) => acc + s.attendancePct, 0) / teacherClassStudents.length).toFixed(1)
+      : '81.4'
+
     return (
       <div className="space-y-8 pb-12">
         {/* Welcome Header */}
@@ -555,7 +532,7 @@ export const CampusDeskPage: React.FC = () => {
                 Teacher Workspace: {user?.name || 'Prof. Vikram Singh'}
               </h1>
               <p className="text-sm text-[#50685e] leading-relaxed">
-                Class Teacher of <strong>Class 8-A</strong> • Senior Mathematics & Computer Applications Faculty.
+                Class Teacher of <strong>{teacherClass}</strong> • {user?.designation || 'Senior Mathematics & Computer Applications Faculty'}.
                 Here is your teaching roster, scheduled periods, and assessment ledger.
               </p>
             </div>
@@ -591,7 +568,7 @@ export const CampusDeskPage: React.FC = () => {
           <StatCard
             label="Assigned Classes"
             value="3 Classes"
-            subtext="Class 8-A, Class 9-B, Class 10-A"
+            subtext={`${teacherClass}, Class 9-B, Class 10-A`}
             icon={Users}
             iconColor="green"
           />
@@ -603,9 +580,9 @@ export const CampusDeskPage: React.FC = () => {
             iconColor="green"
           />
           <StatCard
-            label="Class 8-A Strength"
-            value="5 Students"
-            subtext="Avg Attendance: 81.4%"
+            label={`${teacherClass} Strength`}
+            value={`${teacherClassCount} Students`}
+            subtext={`Avg Attendance: ${teacherAvgAttendance}%`}
             icon={GraduationCap}
             iconColor="green"
           />
@@ -832,10 +809,10 @@ export const CampusDeskPage: React.FC = () => {
                 {todayFormatted} • GREENWOOD ACADEMIC PORTAL
               </div>
               <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#122b22] tracking-tight">
-                {isParent ? 'Parent Portal: Rahul Sharma' : 'Welcome back, Rahul Sharma'}
+                {isParent ? `Parent Portal: ${currentStudent?.name ?? 'Student'}` : `Welcome back, ${currentStudent?.name ?? user?.name ?? 'Student'}`}
               </h1>
               <p className="text-sm text-[#50685e] leading-relaxed">
-                <strong>Class 8-A</strong> • Roll No: <strong>SCH-8A-01</strong> • Class Teacher:{' '}
+                <strong>{currentStudent?.classGrade ?? 'N/A'}</strong> • Roll No: <strong>{currentStudent?.rollNumber ?? 'N/A'}</strong> • Class Teacher:{' '}
                 <strong>Prof. Vikram Singh</strong>
               </p>
             </div>
@@ -884,8 +861,8 @@ export const CampusDeskPage: React.FC = () => {
           />
           <StatCard
             label="School Transport"
-            value="Route 04"
-            subtext="Driver: Ramesh (+91 98450)"
+            value={currentStudent?.busRoute ? currentStudent.busRoute.replace(/Bus Route (\d+).*/, 'Route $1') : 'Day Scholar'}
+            subtext={currentStudent?.busRoute || 'Private / Day Scholar'}
             icon={Bus}
             iconColor="green"
           />
@@ -893,11 +870,11 @@ export const CampusDeskPage: React.FC = () => {
 
         {/* Visual Insights: Subject Proficiency Map & Monthly Attendance Trend */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <SubjectRadarChart title={isParent ? "Rahul's Subject Proficiency Map vs Class Average" : "My Subject Proficiency Radar Map"} />
-          <AttendanceTrendAreaChart title={isParent ? "Rahul's Attendance Consistency Record" : "My Attendance Trajectory"} />
+          <SubjectRadarChart title={isParent ? `${currentStudent?.name ?? 'Your ward'}'s Subject Proficiency Map vs Class Average` : "My Subject Proficiency Radar Map"} />
+          <AttendanceTrendAreaChart title={isParent ? `${currentStudent?.name ?? 'Your ward'}'s Attendance Consistency Record` : "My Attendance Trajectory"} />
         </div>
 
-        <StudentTermProgressLineChart title={isParent ? "Rahul's Multi-Term Score Progression & Growth" : "My Multi-Term Score Growth & Class Comparison"} />
+        <StudentTermProgressLineChart title={isParent ? `${currentStudent?.name ?? 'Your ward'}'s Multi-Term Score Progression & Growth` : "My Multi-Term Score Growth & Class Comparison"} />
 
         {/* Academic Details & Fee Payment Card */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -1086,7 +1063,7 @@ export const CampusDeskPage: React.FC = () => {
             <div className="rounded-xl bg-[#f8faf9] p-4 text-left text-xs space-y-1.5 border border-[#edf3ef]">
               <div className="flex justify-between">
                 <span className="text-[#71877e]">Student:</span>
-                <span className="font-semibold text-[#14241e]">Rahul Sharma (Class 8-A)</span>
+                <span className="font-semibold text-[#14241e]">{currentStudent?.name ?? user?.name ?? 'Student'} ({currentStudent?.classGrade ?? 'N/A'})</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#71877e]">Fee Component:</span>
@@ -1741,100 +1718,10 @@ export const CampusDeskPage: React.FC = () => {
       </div>
 
       {/* MODAL: Enrol Student */}
-      <Modal
+      <EnrolStudentModal
         isOpen={showEnrolModal}
         onClose={() => setShowEnrolModal(false)}
-        title="Enrol New Student"
-        subtitle="Add a pupil to the official Greenwood School academic register."
-      >
-        <form onSubmit={handleEnrolSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#14241e] mb-1">
-              Full Student Name
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Aryan Dixit"
-              className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Class</label>
-              <select
-                value={classGrade}
-                onChange={(e) => setClassGrade(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>Class 6-A</option>
-                <option>Class 6-B</option>
-                <option>Class 7-A</option>
-                <option>Class 8-A</option>
-                <option>Class 9-A</option>
-                <option>Class 10-A</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Bus Transport</label>
-              <select
-                value={busRoute}
-                onChange={(e) => setBusRoute(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>Bus Route 04 (North City)</option>
-                <option>Bus Route 02 (Indiranagar)</option>
-                <option>Bus Route 06 (Whitefield)</option>
-                <option>Day Scholar (Own Transport)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Guardian Name</label>
-              <input
-                type="text"
-                value={guardianName}
-                onChange={(e) => setGuardianName(e.target.value)}
-                placeholder="Parent's Name"
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Guardian Phone</label>
-              <input
-                type="text"
-                value={guardianPhone}
-                onChange={(e) => setGuardianPhone(e.target.value)}
-                placeholder="+91 98765 00000"
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3ef]">
-            <button
-              type="button"
-              onClick={() => setShowEnrolModal(false)}
-              className="rounded-xl border border-[#c9dcd2] px-4 py-2 text-xs font-semibold text-[#485c54] hover:bg-[#f7faf8]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-[#0e4b38] px-5 py-2 text-xs font-semibold text-white hover:bg-[#125641]"
-            >
-              Confirm Admission
-            </button>
-          </div>
-        </form>
-      </Modal>
+      />
 
       {/* MODAL: Issue Invoice */}
       <Modal

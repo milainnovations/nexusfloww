@@ -14,6 +14,10 @@ import {
   FileText,
   AlertCircle,
   Download,
+  Copy,
+  Check,
+  Key,
+  ShieldAlert,
 } from 'lucide-react'
 import { useErpData } from '../context/ErpDataContext'
 import { StatCard } from '../components/common/StatCard'
@@ -66,6 +70,15 @@ export const AdministrationPage: React.FC = () => {
   const [admGuardianName, setAdmGuardianName] = useState('')
   const [admGuardianPhone, setAdmGuardianPhone] = useState('')
   const [admRemarks, setAdmRemarks] = useState('')
+
+  // Admitted Student Credentials Popup State
+  const [admittedCredentials, setAdmittedCredentials] = useState<{
+    name: string
+    roll: string
+    email: string
+    pass: string
+  } | null>(null)
+  const [copiedAdm, setCopiedAdm] = useState(false)
 
   // ---- Computed KPIs ----
   const totalBudget = budgetAllocations.reduce((a, b) => a + b.allocatedAmount, 0)
@@ -136,6 +149,20 @@ export const AdministrationPage: React.FC = () => {
     setAdmGuardianName('')
     setAdmGuardianPhone('')
     setAdmRemarks('')
+  }
+
+  const handleAdmitStudent = (adm: (typeof admissions)[0]) => {
+    updateAdmissionStatus(adm.id, 'Admitted', 'Admitted after successful interview.')
+    const generatedEmail = `${adm.applicantName.toLowerCase().replace(/[^a-z0-9]/g, '')}@student.school.edu`
+    const classTag = (adm.applyingForClass || 'Class 6-A').replace(/[^0-9A-Z]/gi, '').toUpperCase()
+    const generatedRoll = `SCH-${classTag}-${String(students.length + 1).padStart(2, '0')}`
+
+    setAdmittedCredentials({
+      name: adm.applicantName,
+      roll: generatedRoll,
+      email: generatedEmail,
+      pass: 'School@1234',
+    })
   }
 
   const getStatusBadgeVariant = (status: string) => {
@@ -665,7 +692,7 @@ export const AdministrationPage: React.FC = () => {
                         {adm.status === 'Shortlisted' && (
                           <div className="flex items-center justify-end gap-1.5">
                             <button
-                              onClick={() => updateAdmissionStatus(adm.id, 'Admitted', 'Admitted after successful interview.')}
+                              onClick={() => handleAdmitStudent(adm)}
                               className="rounded-lg bg-[#0e4b38] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#125641] transition-all"
                             >
                               Admit
@@ -895,6 +922,78 @@ export const AdministrationPage: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+      {/* ── MODAL: Admitted Student Credentials & Account ───────────────── */}
+      <Modal
+        isOpen={!!admittedCredentials}
+        onClose={() => setAdmittedCredentials(null)}
+        title="Student Admission Confirmed & Portal Account Created"
+        subtitle="Auto-provisioned student roll number and user login details."
+      >
+        {admittedCredentials && (
+          <div className="space-y-4 text-xs">
+            <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800">
+              <Key className="h-5 w-5 shrink-0 text-emerald-600" />
+              <div>
+                <span className="font-bold">Admission Approved & Student Enrolled!</span>
+                <p className="text-[11px] text-emerald-700">
+                  User account created with initial default password and mandatory password change policy.
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-[#d6e3dc] bg-[#f8faf9] p-4 space-y-3 font-mono">
+              <div className="flex justify-between items-center pb-2 border-b border-[#e2ece6]">
+                <span className="text-[#6c8279] text-[11px] font-sans font-medium">Student Name:</span>
+                <span className="font-bold text-[#14241e] font-sans">{admittedCredentials.name}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#6c8279] text-[11px] font-sans font-medium">Assigned Roll #:</span>
+                <span className="font-bold text-[#0e4b38]">{admittedCredentials.roll}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#6c8279] text-[11px] font-sans font-medium">Login Email:</span>
+                <span className="font-bold text-[#14241e] text-[11px]">{admittedCredentials.email}</span>
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-[#e2ece6]">
+                <span className="text-[#6c8279] text-[11px] font-sans font-medium">Default Password:</span>
+                <span className="font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                  {admittedCredentials.pass}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 rounded-xl bg-[#f4f8f5] p-3 text-[11px] text-[#50685e]">
+              <ShieldAlert className="h-4 w-4 shrink-0 text-[#0e4b38] mt-0.5" />
+              <span>
+                <strong>Mandatory Password Reset:</strong> The student must reset their password upon first logging in with <code>{admittedCredentials.pass}</code>.
+              </span>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `Greenwood ERP Admitted Student Credentials:\nName: ${admittedCredentials.name}\nRoll Number: ${admittedCredentials.roll}\nLogin Email: ${admittedCredentials.email}\nInitial Password: ${admittedCredentials.pass}`
+                  navigator.clipboard.writeText(text)
+                  setCopiedAdm(true)
+                  setTimeout(() => setCopiedAdm(false), 2000)
+                }}
+                className="rounded-xl border border-[#0e4b38] bg-[#eef7f2] px-4 py-2 font-sans font-semibold text-[#0e4b38] hover:bg-[#dfede6] flex items-center gap-1.5"
+              >
+                {copiedAdm ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                <span>{copiedAdm ? 'Copied!' : 'Copy Credentials'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdmittedCredentials(null)}
+                className="rounded-xl bg-[#0e4b38] px-5 py-2 font-sans font-semibold text-white hover:bg-[#125641]"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

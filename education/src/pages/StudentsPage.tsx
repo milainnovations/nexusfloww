@@ -6,40 +6,59 @@ import {
   Phone,
   GraduationCap,
   Bus,
+  MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useErpData } from '../context/ErpDataContext'
 import type { Student } from '../data/mockData'
-import { Modal } from '../components/common/Modal'
 import { Drawer } from '../components/common/Drawer'
 import { Badge } from '../components/common/Badge'
+import { WhatsAppDispatchModal } from '../components/common/WhatsAppDispatchModal'
+import { EnrolStudentModal } from '../components/common/EnrolStudentModal'
 
 export const StudentsPage: React.FC = () => {
   const { user } = useAuth()
-  const { students, addStudent, deleteStudent } = useErpData()
+  const { students, deleteStudent } = useErpData()
 
   const role = user?.role || 'Principal'
   const isTeacher = role === 'Teacher'
-  const isStudentOrParent = role === 'Student' || role === 'Parent'
+  const isStudent = role === 'Student'
+  const isParent = role === 'Parent'
+  const isStudentOrParent = isStudent || isParent
+  const userClass = user?.assignedClass || 'Class 8-A'
 
   const [searchQuery, setSearchQuery] = useState('')
-  const [classFilter, setClassFilter] = useState<string>(isTeacher ? 'Class 8-A' : 'All')
+  const [classFilter, setClassFilter] = useState<string>(
+    isTeacher || isStudent || isParent ? userClass : 'All'
+  )
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null)
   const [showEnrolModal, setShowEnrolModal] = useState(false)
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
 
-  // Enrol Form Fields
-  const [name, setName] = useState('')
-  const [rollNumber, setRollNumber] = useState('')
-  const [email, setEmail] = useState('')
-  const [classGrade, setClassGrade] = useState('Class 8-A')
-  const [section, setSection] = useState('A')
-  const [phone, setPhone] = useState('')
-  const [guardianName, setGuardianName] = useState('')
-  const [guardianRelation] = useState('Father')
-  const [guardianPhone, setGuardianPhone] = useState('')
-  const [busRoute, setBusRoute] = useState('Bus Route 04 (North City)')
-  const [bloodGroup, setBloodGroup] = useState('B+')
-  const [gender, setGender] = useState<'Male' | 'Female'>('Male')
+  // Dynamic classes extracted from dataset
+  const availableClasses = useMemo(() => {
+    const list = Array.from(new Set(students.map((s) => s.classGrade))).sort()
+    return ['All', ...list]
+  }, [students])
+
+  // Dynamic header titles per role
+  const headerTitle = useMemo(() => {
+    if (isTeacher) return `My Students (${userClass})`
+    if (isStudent) return `My Class & Classmates (${userClass})`
+    if (isParent) return `My Ward & Class Roster (${userClass})`
+    if (role === 'Library Admin') return 'Student Library Directory'
+    if (role === 'Administration') return 'Student Fee & Registry Roster'
+    return 'Students Register'
+  }, [role, isTeacher, isStudent, isParent, userClass])
+
+  const headerSubtitle = useMemo(() => {
+    if (isTeacher) return 'Pupil directory, guardian contacts, attendance standing, and term remarks for your assigned class.'
+    if (isStudent) return 'Classmate directory, peer attendance, and academic contacts for your enrolled section.'
+    if (isParent) return 'Guardian contact roster, student standing, and academic records for your ward’s class.'
+    if (role === 'Library Admin') return 'Student library membership list for book issuance and circulation tracking.'
+    if (role === 'Administration') return 'Student fee ledger, outstanding dues, and official school enrollment records.'
+    return 'School-wide enrollment directory, class rosters, guardian contacts, and attendance metrics.'
+  }, [role, isTeacher, isStudent, isParent])
 
   // Filtered list
   const filteredStudents = useMemo(() => {
@@ -55,37 +74,6 @@ export const StudentsPage: React.FC = () => {
       return matchesSearch && matchesClass
     })
   }, [students, searchQuery, classFilter])
-
-  const handleEnrolSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    addStudent({
-      name,
-      rollNumber:
-        rollNumber ||
-        `SCH-${classGrade.replace('Class ', '').replace('-', '')}-${String(students.length + 1).padStart(2, '0')}`,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@demo.com`,
-      gender,
-      classGrade,
-      section,
-      academicYear: '2024–2025',
-      phone: phone || '+91 98765 00000',
-      busRoute,
-      guardianName: guardianName || 'Guardian',
-      guardianRelation: guardianRelation || 'Father',
-      guardianPhone: guardianPhone || '+91 98765 00000',
-      address: 'Bengaluru Campus',
-      dues: 0,
-      dateOfBirth: '15 Nov 2011',
-      bloodGroup: bloodGroup || 'B+',
-      remarks: 'Newly admitted student for academic session 2024–25.',
-    })
-    setShowEnrolModal(false)
-    setName('')
-    setRollNumber('')
-    setEmail('')
-    setPhone('')
-    setGuardianName('')
-  }
 
   const exportCSV = () => {
     const headers = 'Roll Number,Name,Class,Guardian,Phone,Attendance,Term Percentage,Grade\n'
@@ -112,12 +100,10 @@ export const StudentsPage: React.FC = () => {
             GREENWOOD SCHOOL ADMISSIONS & REGISTRY
           </span>
           <h1 className="font-editorial text-3xl sm:text-4xl font-normal text-[#14241e] tracking-tight">
-            {isTeacher ? 'My Students (Class 8-A)' : 'Students Register'}
+            {headerTitle}
           </h1>
           <p className="text-sm text-[#50685e]">
-            {isTeacher
-              ? 'Pupil directory, guardian contacts, attendance standing, and term remarks for your assigned class.'
-              : 'School-wide enrollment directory, class rosters, guardian contacts, and attendance metrics.'}
+            {headerSubtitle}
           </p>
         </div>
 
@@ -146,14 +132,14 @@ export const StudentsPage: React.FC = () => {
       <div className="flex flex-col gap-4 rounded-2xl border border-[#e2ece6] bg-white p-4 shadow-bluke-sm sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-semibold text-[#14241e] mr-1">Filter Class:</span>
-          {['All', 'Class 6-B', 'Class 7-A', 'Class 8-A', 'Class 10-A'].map((cls) => (
+          {availableClasses.map((cls) => (
             <button
               key={cls}
               onClick={() => setClassFilter(cls)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 classFilter === cls
                   ? 'bg-[#0e4b38] text-white font-semibold'
-                  : 'bg-[#f4f8f5] text-[#485c54] hover:bg-[#e8f2ec]'
+                  : 'bg-[#f4f8f5] text-[#485c54] hover:bg-[#e8f8f0]'
               }`}
             >
               {cls}
@@ -351,7 +337,15 @@ export const StudentsPage: React.FC = () => {
             </div>
 
             {!isStudentOrParent && (
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  onClick={() => setShowWhatsAppModal(true)}
+                  className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-[#25D366] py-2.5 text-xs font-semibold text-white shadow-bluke-md hover:bg-[#1eb957] transition-all"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Send WhatsApp Alert to Guardian</span>
+                </button>
+
                 <button
                   onClick={() => {
                     deleteStudent(selectedStudent.id)
@@ -367,145 +361,25 @@ export const StudentsPage: React.FC = () => {
         )}
       </Drawer>
 
+      {/* 5. MODAL: WhatsApp Dispatch */}
+      {selectedStudent && (
+        <WhatsAppDispatchModal
+          isOpen={showWhatsAppModal}
+          onClose={() => setShowWhatsAppModal(false)}
+          studentName={selectedStudent.name}
+          studentRoll={selectedStudent.rollNumber}
+          guardianName={selectedStudent.guardianName}
+          guardianPhone={selectedStudent.guardianPhone}
+          classGrade={selectedStudent.classGrade}
+          defaultTemplate="Attendance Alert"
+        />
+      )}
+
       {/* 5. MODAL: Enrol Student */}
-      <Modal
+      <EnrolStudentModal
         isOpen={showEnrolModal}
         onClose={() => setShowEnrolModal(false)}
-        title="Enrol Student — Academic Session 2024–25"
-        subtitle="Add a student and configure class, guardian, and transport details."
-      >
-        <form onSubmit={handleEnrolSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-[#14241e] mb-1">
-              Student Full Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Aryan Dixit"
-              className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Class Grade *</label>
-              <select
-                value={classGrade}
-                onChange={(e) => setClassGrade(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>Class 6-A</option>
-                <option>Class 6-B</option>
-                <option>Class 7-A</option>
-                <option>Class 8-A</option>
-                <option>Class 9-A</option>
-                <option>Class 10-A</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Section</label>
-              <select
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>A</option>
-                <option>B</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Guardian Name *</label>
-              <input
-                type="text"
-                required
-                value={guardianName}
-                onChange={(e) => setGuardianName(e.target.value)}
-                placeholder="e.g. Alok Dixit"
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Guardian Phone *</label>
-              <input
-                type="text"
-                required
-                value={guardianPhone}
-                onChange={(e) => setGuardianPhone(e.target.value)}
-                placeholder="+91 98765 00000"
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Transport Route</label>
-              <select
-                value={busRoute}
-                onChange={(e) => setBusRoute(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>Bus Route 04 (North City)</option>
-                <option>Bus Route 02 (Indiranagar)</option>
-                <option>Bus Route 06 (Whitefield)</option>
-                <option>Day Scholar (Own Transport)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[#14241e] mb-1">Blood Group</label>
-              <select
-                value={bloodGroup}
-                onChange={(e) => setBloodGroup(e.target.value)}
-                className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-              >
-                <option>B+</option>
-                <option>O+</option>
-                <option>A+</option>
-                <option>AB+</option>
-                <option>O-</option>
-                <option>A-</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#14241e] mb-1">Gender</label>
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
-              className="w-full rounded-xl border border-[#c9dcd2] px-3 py-2 text-xs text-[#14241e] focus:border-[#0e4b38] focus:outline-hidden"
-            >
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t border-[#edf3ef]">
-            <button
-              type="button"
-              onClick={() => setShowEnrolModal(false)}
-              className="rounded-xl border border-[#c9dcd2] px-4 py-2 text-xs font-semibold text-[#485c54] hover:bg-[#f7faf8]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="rounded-xl bg-[#0e4b38] px-5 py-2 text-xs font-semibold text-white hover:bg-[#125641]"
-            >
-              Enrol Student
-            </button>
-          </div>
-        </form>
-      </Modal>
+      />
     </div>
   )
 }

@@ -42,8 +42,12 @@ export const AttendancePage: React.FC = () => {
 
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Student specific data (Rahul Sharma)
-  const studentRecord = students.find((s) => s.rollNumber === 'SCH-8A-01') || students[0]
+  // Resolve logged-in student's record by rollNumber, then email, then fallback
+  const studentRecord = (
+    (user?.rollNumber ? students.find((s) => s.rollNumber === user.rollNumber) : null) ??
+    (user?.email ? students.find((s) => s.email.toLowerCase() === user.email.toLowerCase()) : null) ??
+    students[0]
+  )
 
   const handleToggle = (rollNumber: string, status: 'Present' | 'Absent' | 'Late') => {
     setAttendanceState((prev) => ({ ...prev, [rollNumber]: status }))

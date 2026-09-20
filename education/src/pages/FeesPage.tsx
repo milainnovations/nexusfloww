@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  MessageSquare,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useErpData } from '../context/ErpDataContext'
@@ -14,6 +15,7 @@ import { Badge } from '../components/common/Badge'
 import { Modal } from '../components/common/Modal'
 import { FeeCollectionDonutChart, FeeCategoryBreakdownBarChart } from '../components/analytics/AnalyticsCharts'
 import type { Invoice } from '../data/mockData'
+import { WhatsAppDispatchModal } from '../components/common/WhatsAppDispatchModal'
 
 export const FeesPage: React.FC = () => {
   const { user } = useAuth()
@@ -30,11 +32,19 @@ export const FeesPage: React.FC = () => {
   const role = user?.role || 'Principal'
   const isStudentOrParent = role === 'Student' || role === 'Parent'
   const isManagement = role === 'Principal' || role === 'Super Admin'
+  const canSendWhatsAppFeeAlerts = role === 'Principal' || role === 'Super Admin' || role === 'Administration'
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'All' | 'Pending' | 'Paid' | 'Overdue'>('All')
   const [showIssueModal, setShowIssueModal] = useState(false)
   const [selectedReceipt, setSelectedReceipt] = useState<Invoice | null>(null)
+
+  // WhatsApp Dispatch state
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false)
+  const [whatsAppTarget, setWhatsAppTarget] = useState<{
+    invoice: Invoice
+    template: 'Fee Receipt' | 'Fee Reminder'
+  } | null>(null)
 
   // Invoice Form State
   const [invStudentRoll, setInvStudentRoll] = useState(students[0]?.rollNumber || '')
@@ -78,11 +88,18 @@ export const FeesPage: React.FC = () => {
 
   const handlePay = (inv: Invoice) => {
     markInvoicePaid(inv.id)
-    setSelectedReceipt({
+    const paidInv = {
       ...inv,
-      status: 'Paid',
+      status: 'Paid' as const,
       paidDate: new Date().toLocaleDateString('en-GB'),
-    })
+    }
+    setSelectedReceipt(paidInv)
+  }
+
+  const triggerWhatsApp = (invoice: Invoice, template: 'Fee Receipt' | 'Fee Reminder') => {
+    if (!canSendWhatsAppFeeAlerts) return
+    setWhatsAppTarget({ invoice, template })
+    setShowWhatsAppModal(true)
   }
 
   return (
@@ -224,22 +241,44 @@ export const FeesPage: React.FC = () => {
                       {inv.status}
                     </Badge>
                   </td>
-                  <td className="py-4 px-6 text-right">
+                  <td className="py-4 px-6 text-right flex items-center justify-end gap-2">
                     {inv.status !== 'Paid' ? (
-                      <button
-                        onClick={() => handlePay(inv)}
-                        className="rounded-lg bg-[#0e4b38] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#125641] transition-all"
-                      >
-                        {isStudentOrParent ? 'Pay Online' : 'Mark as Paid'}
-                      </button>
+                      <>
+                        {canSendWhatsAppFeeAlerts && (
+                          <button
+                            onClick={() => triggerWhatsApp(inv, 'Fee Reminder')}
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#25D366] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#166534] hover:bg-[#25D366] hover:text-white transition-all shadow-2xs"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>WhatsApp Reminder</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handlePay(inv)}
+                          className="rounded-lg bg-[#0e4b38] px-3 py-1.5 text-xs font-semibold text-white shadow-2xs hover:bg-[#125641] transition-all"
+                        >
+                          {isStudentOrParent ? 'Pay Online' : 'Mark as Paid'}
+                        </button>
+                      </>
                     ) : (
-                      <button
-                        onClick={() => setSelectedReceipt(inv)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#c5d8cd] px-3 py-1.5 text-xs font-semibold text-[#0e4b38] hover:bg-[#eef5f1] transition-all"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                        <span>View Receipt</span>
-                      </button>
+                      <>
+                        {canSendWhatsAppFeeAlerts && (
+                          <button
+                            onClick={() => triggerWhatsApp(inv, 'Fee Receipt')}
+                            className="inline-flex items-center gap-1 rounded-lg border border-[#25D366] bg-[#f0fdf4] px-2.5 py-1.5 text-xs font-semibold text-[#166534] hover:bg-[#25D366] hover:text-white transition-all shadow-2xs"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>WhatsApp Receipt</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setSelectedReceipt(inv)}
+                          className="inline-flex items-center gap-1 rounded-lg border border-[#c5d8cd] px-3 py-1.5 text-xs font-semibold text-[#0e4b38] hover:bg-[#eef5f1] transition-all"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                          <span>View Receipt</span>
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>
@@ -344,7 +383,7 @@ export const FeesPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 bg-[#f8faf9] p-4 rounded-xl border border-[#edf3ef]">
+            <div className="grid grid-cols-2 gap-[#edf3ef] bg-[#f8faf9] p-4 rounded-xl border border-[#edf3ef]">
               <div>
                 <span className="text-[#71877e] block">Student:</span>
                 <span className="font-bold text-[#14241e]">{selectedReceipt.studentName}</span>
@@ -380,18 +419,49 @@ export const FeesPage: React.FC = () => {
               <span className="text-[#0e4b38] font-bold">★ SEAL VERIFIED ★</span>
             </div>
 
-            <button
-              onClick={() => {
-                setSelectedReceipt(null)
-                window.print()
-              }}
-              className="w-full rounded-xl bg-[#0e4b38] py-2.5 text-xs font-semibold text-white hover:bg-[#125641]"
-            >
-              Print Receipt
-            </button>
+            <div className="flex gap-3">
+              {canSendWhatsAppFeeAlerts && (
+                <button
+                  onClick={() => triggerWhatsApp(selectedReceipt, 'Fee Receipt')}
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#25D366] py-2.5 text-xs font-semibold text-white hover:bg-[#1eb957] transition-all"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>Send WhatsApp Receipt</span>
+                </button>
+              )}
+
+              <button
+                onClick={() => {
+                  setSelectedReceipt(null)
+                  window.print()
+                }}
+                className="w-full rounded-xl bg-[#0e4b38] py-2.5 text-xs font-semibold text-white hover:bg-[#125641]"
+              >
+                Print Receipt
+              </button>
+            </div>
           </div>
         )}
       </Modal>
+
+      {/* MODAL: WhatsApp Dispatch */}
+      {whatsAppTarget && (
+        <WhatsAppDispatchModal
+          isOpen={showWhatsAppModal}
+          onClose={() => {
+            setShowWhatsAppModal(false)
+            setWhatsAppTarget(null)
+          }}
+          studentName={whatsAppTarget.invoice.studentName}
+          studentRoll={whatsAppTarget.invoice.studentRoll}
+          guardianName={`Guardian of ${whatsAppTarget.invoice.studentName}`}
+          guardianPhone="+91 98765 43210"
+          classGrade={whatsAppTarget.invoice.classGrade}
+          defaultTemplate={whatsAppTarget.template}
+          amount={whatsAppTarget.invoice.amount}
+          feeType={whatsAppTarget.invoice.feeType}
+        />
+      )}
     </div>
   )
 }

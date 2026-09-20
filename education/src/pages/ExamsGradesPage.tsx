@@ -139,8 +139,12 @@ export const ExamsGradesPage: React.FC = () => {
     setShowReportCardModal(true)
   }
 
-  // Student specific record (Rahul Sharma)
-  const defaultStudentCard = students.find((s) => s.rollNumber === 'SCH-8A-01') || students[0]
+  // Student specific record — resolved from logged-in user, not hardcoded
+  const defaultStudentCard = (
+    (user?.rollNumber ? students.find((s) => s.rollNumber === user.rollNumber) : null) ??
+    (user?.email ? students.find((s) => s.email.toLowerCase() === user.email.toLowerCase()) : null) ??
+    students[0]
+  )
 
   const handleCsvTextChange = (text: string) => {
     setCsvText(text)
